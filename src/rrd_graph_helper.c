@@ -526,6 +526,7 @@ int rrd_parse_textalign(
 ** While this is arguable, so is entering fixed numbers
 ** with more than MAX_VNAME_LEN significant digits.
 */
+// PVHLAST stands for Parse VRULE, HRULE, LINE, AREA, STACK and TICK
 int rrd_parse_PVHLAST(
     const char *const line,
     unsigned int *const eaten,
@@ -534,7 +535,7 @@ int rrd_parse_PVHLAST(
 {
     int       i, j, k, j2;
     int       colorfound = 0;
-    char      tmpstr[MAX_VNAME_LEN + 10];   /* vname#RRGGBBAA\0 */
+    char      tmpstr[MAX_VNAME_LEN + 20];   /* vname#RRGGBBAA\0 */ // 20 for HEAT
     static int spacecnt = 0;
 
     if (spacecnt == 0) {
@@ -561,6 +562,11 @@ int rrd_parse_PVHLAST(
     if (gdp->gf == GF_STACK) {
         gdp->stack = 1;
     }
+   
+    // HEAT  
+    if (gdp->gf == GF_HEAT) {
+        gdp->heat = 1;
+    } // HEAT
 
     i = scan_for_col(&line[*eaten], MAX_VNAME_LEN + 9, tmpstr);
     if (line[*eaten + i] != '\0' && line[*eaten + i] != ':') {
@@ -671,19 +677,21 @@ int rrd_parse_PVHLAST(
             	    gdp->col.green, gdp->col.blue, gdp->col.alpha);
 			gdp->col2 = gdp->col;
 			gdp->col = firstcol;
-			//we now have a mandatory grid height
-    		(*eaten) += i;
-			if (line[*eaten] != '\0') {
-				(*eaten)++;
+			if(gdp->gf == GF_GRAD){
+				//we now have a mandatory grid height
+				(*eaten) += i;
+				if (line[*eaten] != '\0') {
+					(*eaten)++;
+				}
+				dprintf("- examining gradient height\n");
+				i = scan_for_col(&line[*eaten], MAX_VNAME_LEN + 9, tmpstr);
+				sscanf(tmpstr, "%lf%n", &gdp->gradheight, &j);
+				if (i != j) {
+					rrd_set_error("Could not parse gradient height in '%s'", tmpstr);
+					return 1;
+				}
+				dprintf("- parsed gradientheight %0.0f\n", gdp->gradheight);
 			}
-			dprintf("- examining gradient height\n");
-			i = scan_for_col(&line[*eaten], MAX_VNAME_LEN + 9, tmpstr);
-			sscanf(tmpstr, "%lf%n", &gdp->gradheight, &j);
-			if (i != j) {
-				rrd_set_error("Could not parse gradient height in '%s'", tmpstr);
-				return 1;
-			}
-			dprintf("- parsed gradientheight %0.0f\n", gdp->gradheight);
 		}
     } else {
         dprintf("- no color present in '%s'\n", tmpstr);
@@ -725,7 +733,40 @@ int rrd_parse_PVHLAST(
                 return 1;
             }
         }
-    }
+    } else if (gdp->gf == GF_HEAT) {
+		dprintf("- parsing '%s'\n", &line[*eaten]);
+        dprintf("- looking for HEAT height\n");
+        j = 0;
+        sscanf(&line[*eaten], "%lf%n", &gdp->heat_height, &j);
+        if (j) {
+            if (line[*eaten + j] != '\0' && line[*eaten + j] != ':') {
+                rrd_set_error("Cannot parse HEAT height '%s'", line);
+                return 1;
+            }
+            dprintf("- found number %f\n", gdp->yrule);
+			/*
+            if (gdp->yrule > 1.0 || gdp->yrule < -1.0) {
+                rrd_set_error("HEAT factor should be <= 1.0");
+                return 1;
+            }
+			*/
+            (*eaten) += j;
+        } else {
+            dprintf("- not found, defaulting to 1.0\n");
+            gdp->yrule = 1.0;
+        }
+        if (line[*eaten] == '\0') {
+            dprintf("- done parsing line\n");
+            return 0;
+        } else {
+            if (line[*eaten] == ':') {
+                (*eaten)++;
+            } else {
+                rrd_set_error("This HEAT line does not make sense");
+                return 1;
+            }
+        }
+	}
 
     dprintf("- parsing '%s'\n", &line[*eaten]);
 
@@ -798,6 +839,33 @@ int rrd_parse_PVHLAST(
         } else
             dprintf("- not STACKing\n");
     }
+   
+
+   // HEAT
+   if ((gdp->gf != GF_HRULE)
+        && (gdp->gf != GF_VRULE)
+        && (gdp->gf != GF_TICK)) {
+
+        dprintf("- parsing '%s', looking for HEAT\n", &line[*eaten]);
+        j = scan_for_col(&line[*eaten], 5, tmpstr);
+        if (!strcmp("HEAT", tmpstr)) {
+            dprintf("- found HEAT\n");
+            gdp->heat = 1;
+            (*eaten) += j;
+            if (line[*eaten] == ':') {
+                (*eaten) += 1;
+            } else if (line[*eaten] == '\0') {
+                dprintf("- done parsing line\n");
+                return 0;
+            } else {
+                dprintf("- found %s instead of just HEAT\n", &line[*eaten]);
+                rrd_set_error("HEAT expected but %s found", &line[*eaten]);
+                return 1;
+            }
+        } else
+            dprintf("- not STACKing\n");
+    } // HEAT
+
 
     dprintf("- still more, should be dashes[=...]\n");
     dprintf("- parsing '%s'\n", &line[*eaten]);
@@ -1179,7 +1247,20 @@ void rrd_graph_script(
             }
             break;
             /* data acquisition */
-        case GF_DEF:   /* vname=x:DS:CF:[:step=#][:start=#][:end=#] */
+        case GF_HEAT:  /* vname-or-value#color1#color2:height[:legend][:STACK] */
+            if (rrd_parse_PVHLAST(argv[i], &eaten, gdp, im))
+                return;
+            if (last_gf == GF_LINE || last_gf == GF_AREA || last_gf == GF_GRAD) {
+                gdp->gf = last_gf;
+                gdp->linewidth = last_linewidth;
+            } else {
+                rrd_set_error("HEAT must follow LINE or AREA! command:\n%s",
+                              &argv[i][eaten], argv[i]);
+                return;
+            }
+            break;
+            /* data acquisition */
+	case GF_DEF:   /* vname=x:DS:CF:[:step=#][:start=#][:end=#] */
             if (rrd_parse_def(argv[i], &eaten, gdp, im))
                 return;
             break;

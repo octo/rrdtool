@@ -52,7 +52,7 @@ enum grc_en { GRC_CANVAS = 0, GRC_BACK, GRC_SHADEA, GRC_SHADEB,
 #define GRIDWIDTH  0.4
 
 enum gf_en { GF_PRINT = 0, GF_GPRINT, GF_COMMENT, GF_HRULE, GF_VRULE, GF_LINE,
-    GF_AREA,GF_GRAD, GF_STACK, GF_TICK, GF_TEXTALIGN,
+    GF_AREA, GF_GRAD, GF_STACK, GF_HEAT, GF_TICK, GF_TEXTALIGN,
     GF_DEF, GF_CDEF, GF_VDEF, GF_SHIFT,
     GF_XPORT
 };
@@ -152,6 +152,7 @@ typedef struct ylab_t {
 typedef struct graph_desc_t {
     enum gf_en gf;      /* graphing function */
     int       stack;    /* boolean */
+    int       heat;    /* boolean */
     int       debug;    /* boolean */
     char      vname[MAX_VNAME_LEN + 1]; /* name of the variable */
     long      vidx;     /* gdes reference */
@@ -168,6 +169,7 @@ typedef struct graph_desc_t {
     int       strftm;   /* should the VDEF legend be formated with strftime */
     double    leg_x, leg_y; /* location of legend */
     double    yrule;    /* value for y rule line and for VDEF */
+    double    heat_height; /* value for the height of a HEAT graph */
     time_t    xrule;    /* time for x rule line and for VDEF */
     vdef_t    vf;       /* instruction for VDEF function */
     rpnp_t   *rpnp;     /* instructions for CDEF function */
@@ -439,6 +441,11 @@ void      gfx_add_point(
     image_desc_t *im,
     double x,
     double y);
+
+gfx_color_t gfx_pick_heat_color(
+    double y,
+    gfx_color_t color1,
+    gfx_color_t color2);
 
 /* create a rect that has a gradient from color1 to color2 in height pixels 
  * height > 0:

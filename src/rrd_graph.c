@@ -236,6 +236,7 @@ enum gf_en gf_conv(
     conv_if(AREA, GF_AREA);
 	conv_if(GRAD, GF_GRAD);
     conv_if(STACK, GF_STACK);
+    conv_if(HEAT, GF_HEAT); // HEAT
     conv_if(TICK, GF_TICK);
     conv_if(TEXTALIGN, GF_TEXTALIGN);
     conv_if(DEF, GF_DEF);
@@ -1222,6 +1223,7 @@ int data_proc(
         if ((im->gdes[i].gf == GF_LINE)
          || (im->gdes[i].gf == GF_AREA) 
          || (im->gdes[i].gf == GF_TICK)
+         || (im->gdes[i].gf == GF_HEAT)
          || (im->gdes[i].gf == GF_GRAD)
         ) {
             if ((im->gdes[i].p_data = (rrd_value_t*)malloc((im->xsize + 1)
@@ -1246,7 +1248,7 @@ int data_proc(
             case GF_AREA:
 			case GF_GRAD:
             case GF_TICK:
-                if (!im->gdes[ii].stack)
+                if (!im->gdes[ii].stack && !im->gdes[ii].heat) // HEAT
                     paintval = 0.0;
                 value = im->gdes[ii].yrule;
                 if (isnan(value) || (im->gdes[ii].gf == GF_TICK)) {
@@ -1276,8 +1278,13 @@ int data_proc(
                 };
 
                 if (!isnan(value)) {
-                    paintval += value;
-                    im->gdes[ii].p_data[i] = paintval;
+                    if(im->gdes[ii].gf != GF_HEAT){
+						paintval += value;
+						im->gdes[ii].p_data[i] = paintval;
+					}
+                    if(im->gdes[ii].gf == GF_HEAT){
+						im->gdes[ii].p_data[i] = value;
+					}
                     /* GF_TICK: the data values are not
                      ** relevant for min and max
                      */
@@ -1295,6 +1302,11 @@ int data_proc(
             case GF_STACK:
                 rrd_set_error
                     ("STACK should already be turned into LINE or AREA here");
+                return -1;
+                break;
+	    case GF_HEAT:
+                rrd_set_error
+                    ("HEAT should already be turned into LINE or AREA here");
                 return -1;
                 break;
             default:
@@ -1670,7 +1682,12 @@ int print_calc(
                 ("STACK should already be turned into LINE or AREA here");
             return -1;
             break;
-        }
+        case GF_HEAT:
+            rrd_set_error
+                ("HEAT should already be turned into LINE or AREA here");
+            return -1;
+            break;
+	}
     }
     return graphelement;
 }
@@ -3432,8 +3449,8 @@ int graph_paint(
             break;
         case GF_LINE:
         case GF_AREA:
-		case GF_GRAD:
-            /* fix data points at oo and -oo */
+			case GF_GRAD:
+            /* fix data points at infinity and -infinity */
             for (ii = 0; ii < im->xsize; ii++) {
                 if (isinf(im->gdes[i].p_data[ii])) {
                     if (im->gdes[i].p_data[ii] > 0) {
@@ -3456,10 +3473,10 @@ int graph_paint(
                we draw a square from t-1 to t with the value a.
 
                ********************************************************* */
-            if (im->gdes[i].col.alpha != 0.0) {
+            if (im->gdes[i].col.alpha != 0.0) { // if the pixel is not transparent
                 /* GF_LINE and friend */
                 if (im->gdes[i].gf == GF_LINE) {
-                    double    last_y = 0.0;
+                    double    last_y = 0.0; // y coordinate
                     int       draw_on = 0;
 
                     cairo_save(im->cr);
@@ -3564,11 +3581,22 @@ int graph_paint(
                                 cntI++;
                             }
 							if (im->gdes[i].gf != GF_GRAD) {
-                            	gfx_new_area(im,
-                            	             backX[0], backY[0],
-                            	             foreX[0], foreY[0],
-                            	             foreX[cntI],
-                            	             foreY[cntI], im->gdes[i].col);
+								/*
+								if(im->gdes[i].gf != GF_HEAT){
+									gfx_color_t color;
+									color=gfx_pick_heat_color(gdes[i].p_data[ii], im->gdes[i].col, im->gdes[i].col2);
+									gfx_new_area(im,
+												 backX[0], backY[0],
+												 foreX[0], foreY[0],
+												 foreX[cntI],
+												 foreY[cntI], color);
+								}else{ // not a HEAT command.
+								*/
+							gfx_new_area(im,
+										 backX[0], backY[0],
+										 foreX[0], foreY[0],
+										 foreX[cntI],
+										 foreY[cntI], im->gdes[i].col);
 							} else {
 								lastx = foreX[cntI];
 								lasty = foreY[cntI];
@@ -3589,7 +3617,7 @@ int graph_paint(
                                                                 + 1], 4)) {
                                     cntI++;
                                 }
-								if (im->gdes[i].gf != GF_GRAD) {
+								if (im->gdes[i].gf != GF_GRAD) { // Once for fore
 	                                gfx_add_point(im, foreX[cntI], foreY[cntI]);
 								} else {
 									gfx_add_rect_fadey(im, 
@@ -3603,7 +3631,7 @@ int graph_paint(
 									lasty = foreY[cntI];
 								}
                             }
-							if (im->gdes[i].gf != GF_GRAD) {
+							if (im->gdes[i].gf != GF_GRAD) { // And once for back
                             	gfx_add_point(im, backX[idxI], backY[idxI]);
 							} else {
 								gfx_add_rect_fadey(im,
@@ -3655,20 +3683,29 @@ int graph_paint(
                         }
                         if (ii == im->xsize)
                             break;
-                        if (im->slopemode == 0 && ii == 0) {
+                        if (im->slopemode == 0 && ii == 0) { // This is the INIT configuration
                             continue;
                         }
-                        if (isnan(im->gdes[i].p_data[ii])) {
+                        if (isnan(im->gdes[i].p_data[ii])) { // This is the case initially as p_data is init NULL
                             drawem = 1;
                             continue;
                         }
-                        ytop = ytr(im, im->gdes[i].p_data[ii]);
-                        if (lastgdes && im->gdes[i].stack) {
-                            ybase = ytr(im, lastgdes->p_data[ii]);
-                        } else {
-                            ybase = ytr(im, areazero);
-                        }
-                        if (ybase == ytop) {
+						if(im->gdes[i].gf != GF_HEAT){
+								ytop = ytr(im, im->gdes[i].p_data[ii]);
+								if (lastgdes && im->gdes[i].stack) { 
+									ybase = ytr(im, lastgdes->p_data[ii]);
+								} else {
+									ybase = ytr(im, areazero);
+								}
+						}else{ 
+								ytop = ytr(im, im->gdes[i].heat_height);
+								if (lastgdes && im->gdes[i].heat) { 
+									ybase = ytr(im, lastgdes->p_data[ii]);
+								} else {
+									ybase = ytr(im, areazero);
+								}
+						}
+                        if (ybase == ytop) { // data value is 0
                             drawem = 1;
                             continue;
                         }
@@ -3696,12 +3733,22 @@ int graph_paint(
                     free(backY);
                     free(backX);
                 }       /* else GF_LINE */
-            }
+            } // if (im->gdes[i].col.alpha != 0.0)
             /* if color != 0x0 */
             /* make sure we do not run into trouble when stacking on NaN */
             for (ii = 0; ii < im->xsize; ii++) {
                 if (isnan(im->gdes[i].p_data[ii])) {
-                    if (lastgdes && (im->gdes[i].stack)) {
+                    if (lastgdes && im->gdes[i].stack) {
+                        im->gdes[i].p_data[ii] = lastgdes->p_data[ii];
+                    } else {
+                        im->gdes[i].p_data[ii] = areazero;
+                    }
+                }
+            }
+	    // HEAT
+	    for (ii = 0; ii < im->xsize; ii++) {
+                if (isnan(im->gdes[i].p_data[ii])) {
+                    if (lastgdes && im->gdes[i].heat) {
                         im->gdes[i].p_data[ii] = lastgdes->p_data[ii];
                     } else {
                         im->gdes[i].p_data[ii] = areazero;
@@ -3715,6 +3762,12 @@ int graph_paint(
                 ("STACK should already be turned into LINE or AREA here");
             return -1;
             break;
+	case GF_HEAT:
+            rrd_set_error
+                ("HEAT should already be turned into LINE or AREA here");
+            return -1;
+            break;
+ 
         }               /* switch */
     }
     cairo_reset_clip(im->cr);
@@ -3820,8 +3873,9 @@ int gdes_alloc(
     im->gdes[im->gdes_c - 1].step = im->step;
     im->gdes[im->gdes_c - 1].step_orig = im->step;
     im->gdes[im->gdes_c - 1].stack = 0;
+    im->gdes[im->gdes_c - 1].heat = 0; //HEAT
     im->gdes[im->gdes_c - 1].linewidth = 0;
-    im->gdes[im->gdes_c - 1].debug = 0;
+    im->gdes[im->gdes_c - 1].debug = 1;
     im->gdes[im->gdes_c - 1].start = im->start;
     im->gdes[im->gdes_c - 1].start_orig = im->start;
     im->gdes[im->gdes_c - 1].end = im->end;
@@ -3855,6 +3909,7 @@ int gdes_alloc(
     im->gdes[im->gdes_c - 1].cf = CF_AVERAGE;
     im->gdes[im->gdes_c - 1].yrule = DNAN;
     im->gdes[im->gdes_c - 1].xrule = 0;
+    im->gdes[im->gdes_c - 1].heat_height = DNAN;
     im->gdes[im->gdes_c - 1].daemon[0] = 0;
     return 0;
 }

@@ -105,6 +105,25 @@ void gfx_add_point(
     cairo_line_to(cr, x, y);
 }
 
+/*TODO adds HEAT point */
+gfx_color_t gfx_pick_heat_color(
+    double y,
+	gfx_color_t color1,
+	gfx_color_t color2)
+{
+// TODO	if(isnan(y)){
+	if(y < 0.0)
+		y = 0.0;
+	if(y > 1.0)
+		y = 1.0;
+	
+	gfx_color_t color;
+	color.red = color1.red + (color2.red - color1.red)*y;	
+	color.green = color1.green + (color2.green - color1.green)*y;	
+	color.blue = color1.blue + (color2.blue - color1.blue)*y;
+	return color;	
+}
+
 /* add a point to a line or to an area */
 void gfx_add_rect_fadey(
     image_desc_t *im,
