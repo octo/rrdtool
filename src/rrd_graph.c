@@ -1609,8 +1609,12 @@ int print_calc(
 
                 if (im->gdes[i].strftm) {
                     prline.u_str = (char*)malloc((FMT_LEG_LEN + 2) * sizeof(char));
-                    strftime(prline.u_str,
-                             FMT_LEG_LEN, im->gdes[i].format, &tmvdef);
+                    if (im->gdes[vidx].vf.never == 1) {
+                       time_clean(prline.u_str, im->gdes[i].format);
+                    } else {
+                        strftime(prline.u_str,
+                                 FMT_LEG_LEN, im->gdes[i].format, &tmvdef);
+                    }
                 } else if (bad_format(im->gdes[i].format)) {
                     rrd_set_error
                         ("bad format for PRINT in '%s'", im->gdes[i].format);
@@ -1627,8 +1631,12 @@ int print_calc(
                 /* GF_GPRINT */
 
                 if (im->gdes[i].strftm) {
-                    strftime(im->gdes[i].legend,
-                             FMT_LEG_LEN, im->gdes[i].format, &tmvdef);
+                    if (im->gdes[vidx].vf.never == 1) {
+                       time_clean(im->gdes[i].legend, im->gdes[i].format);
+                    } else {
+                        strftime(im->gdes[i].legend,
+                                 FMT_LEG_LEN, im->gdes[i].format, &tmvdef);
+                    }
                 } else {
                     if (bad_format(im->gdes[i].format)) {
                         rrd_set_error
@@ -4950,6 +4958,7 @@ int vdef_parse(
             gdes->vf.param = param;
             gdes->vf.val = DNAN;    /* undefined */
             gdes->vf.when = 0;  /* undefined */
+            gdes->vf.never = 1;
         } else {
             rrd_set_error
                 ("Parameter '%f' out of range in VDEF '%s'\n",
@@ -4971,6 +4980,7 @@ int vdef_parse(
             gdes->vf.param = DNAN;
             gdes->vf.val = DNAN;
             gdes->vf.when = 0;
+            gdes->vf.never = 1;
         } else {
             rrd_set_error
                 ("Function '%s' needs no parameter in VDEF '%s'\n",
@@ -5016,6 +5026,7 @@ int vdef_calc(
         field = round((dst->vf.param * (double)(steps - 1)) / 100.0);
         dst->vf.val = array[field];
         dst->vf.when = 0;   /* no time component */
+        dst->vf.never = 1;
         free(array);
 #if 0
         for (step = 0; step < steps; step++)
@@ -5049,6 +5060,7 @@ int vdef_calc(
         field = round( dst->vf.param * (double)(nancount - 1) / 100.0);
         dst->vf.val = array[field];
         dst->vf.when = 0;   /* no time component */
+        dst->vf.never = 1;
         free(array);
     }
         break;
@@ -5059,15 +5071,18 @@ int vdef_calc(
         if (step == steps) {
             dst->vf.val = DNAN;
             dst->vf.when = 0;
+            dst->vf.never = 1;
         } else {
             dst->vf.val = data[step * src->ds_cnt];
             dst->vf.when = src->start + (step + 1) * src->step;
+            dst->vf.never = 0;
         }
         while (step != steps) {
             if (finite(data[step * src->ds_cnt])) {
                 if (data[step * src->ds_cnt] > dst->vf.val) {
                     dst->vf.val = data[step * src->ds_cnt];
                     dst->vf.when = src->start + (step + 1) * src->step;
+                    dst->vf.never = 0;
                 }
             }
             step++;
@@ -5090,9 +5105,11 @@ int vdef_calc(
             if (dst->vf.op == VDEF_TOTAL) {
                 dst->vf.val = sum * src->step;
                 dst->vf.when = 0;   /* no time component */
+                dst->vf.never = 1;
             } else if (dst->vf.op == VDEF_AVERAGE) {
                 dst->vf.val = sum / cnt;
                 dst->vf.when = 0;   /* no time component */
+                dst->vf.never = 1;
             } else {
                 average = sum / cnt;
                 sum = 0.0;
@@ -5103,10 +5120,12 @@ int vdef_calc(
                 }
                 dst->vf.val = pow(sum / cnt, 0.5);
                 dst->vf.when = 0;   /* no time component */
+                dst->vf.never = 1;
             };
         } else {
             dst->vf.val = DNAN;
             dst->vf.when = 0;
+            dst->vf.never = 1;
         }
     }
         break;
@@ -5117,15 +5136,18 @@ int vdef_calc(
         if (step == steps) {
             dst->vf.val = DNAN;
             dst->vf.when = 0;
+            dst->vf.never = 1;
         } else {
             dst->vf.val = data[step * src->ds_cnt];
             dst->vf.when = src->start + (step + 1) * src->step;
+            dst->vf.never = 0;
         }
         while (step != steps) {
             if (finite(data[step * src->ds_cnt])) {
                 if (data[step * src->ds_cnt] < dst->vf.val) {
                     dst->vf.val = data[step * src->ds_cnt];
                     dst->vf.when = src->start + (step + 1) * src->step;
+                    dst->vf.never = 0;
                 }
             }
             step++;
@@ -5142,9 +5164,11 @@ int vdef_calc(
         if (step == steps) {    /* all entries were NaN */
             dst->vf.val = DNAN;
             dst->vf.when = 0;
+            dst->vf.never = 1;
         } else {
             dst->vf.val = data[step * src->ds_cnt];
             dst->vf.when = src->start + step * src->step;
+            dst->vf.never = 0;
         }
         break;
     case VDEF_LAST:
@@ -5158,9 +5182,11 @@ int vdef_calc(
         if (step < 0) { /* all entries were NaN */
             dst->vf.val = DNAN;
             dst->vf.when = 0;
+            dst->vf.never = 1;
         } else {
             dst->vf.val = data[step * src->ds_cnt];
             dst->vf.when = src->start + (step + 1) * src->step;
+            dst->vf.never = 0;
         }
         break;
     case VDEF_LSLSLOPE:
@@ -5198,16 +5224,20 @@ int vdef_calc(
             if (dst->vf.op == VDEF_LSLSLOPE) {
                 dst->vf.val = slope;
                 dst->vf.when = 0;
+                dst->vf.never = 1;
             } else if (dst->vf.op == VDEF_LSLINT) {
                 dst->vf.val = y_intercept;
                 dst->vf.when = 0;
+                dst->vf.never = 1;
             } else if (dst->vf.op == VDEF_LSLCORREL) {
                 dst->vf.val = correl;
                 dst->vf.when = 0;
+                dst->vf.never = 1;
             };
         } else {
             dst->vf.val = DNAN;
             dst->vf.when = 0;
+            dst->vf.never = 1;
         }
     }
         break;
@@ -5255,4 +5285,157 @@ void grinfo_push(
     if (im->grinfo == NULL) {
         im->grinfo = im->grinfo_current;
     }
+}
+
+
+void time_clean(
+    char *result,
+    char *format)
+{
+    int       j, jj;
+    
+/*     Handling based on
+       - ANSI C99 Specifications                         http://www.open-std.org/jtc1/sc22/wg14/www/docs/n1124.pdf
+       - Single UNIX Specification version 2             http://www.opengroup.org/onlinepubs/007908799/xsh/strftime.html 
+       - POSIX:2001/Single UNIX Specification version 3  http://www.opengroup.org/onlinepubs/009695399/functions/strftime.html
+       - POSIX:2008 Specifications                       http://www.opengroup.org/onlinepubs/9699919799/functions/strftime.html
+       Specifications tells 
+       "If a conversion specifier is not one of the above, the behavior is undefined."
+
+      C99 tells
+       "A conversion specifier consists of a % character, possibly followed by an E or O modifier character (described below), followed by a character that determines the behavior of the conversion specifier.
+
+      POSIX:2001 tells
+      "A conversion specification consists of a '%' character, possibly followed by an E or O modifier, and a terminating conversion specifier character that determines the conversion specification's behavior."
+
+      POSIX:2008 introduce more complexe behavior that are not handled here.
+
+      According to this, this code will replace:
+      - % followed by @ by a %@
+      - % followed by   by a %SPACE
+      - % followed by . by a %.
+      - % followed by % by a %
+      - % followed by t by a TAB
+      - % followed by E then anything by '-'
+      - % followed by O then anything by '-'
+      - % followed by anything else by at least one '-'. More characters may be added to better fit expected output length
+*/
+
+    jj = 0;
+    for(j = 0; (j < FMT_LEG_LEN - 1) && (jj < FMT_LEG_LEN); j++) { /* we don't need to parse the last char */
+        if (format[j] == '%') {
+            if ((format[j+1] == 'E') || (format[j+1] == 'O')) {
+                result[jj++] = '-';
+                j+=2; /* We skip next 2 following char */
+            } else if ((format[j+1] == 'C') || (format[j+1] == 'd') ||
+                       (format[j+1] == 'g') || (format[j+1] == 'H') ||
+                       (format[j+1] == 'I') || (format[j+1] == 'm') ||
+                       (format[j+1] == 'M') || (format[j+1] == 'S') ||
+                       (format[j+1] == 'U') || (format[j+1] == 'V') ||
+                       (format[j+1] == 'W') || (format[j+1] == 'y')) {
+                result[jj++] = '-';
+                if (jj < FMT_LEG_LEN) {
+                    result[jj++] = '-';
+                }
+                j++; /* We skip the following char */
+            } else if (format[j+1] == 'j') {
+                result[jj++] = '-';
+                if (jj < FMT_LEG_LEN - 1) {
+                    result[jj++] = '-';
+                    result[jj++] = '-';
+               }
+                j++; /* We skip the following char */
+            } else if ((format[j+1] == 'G') || (format[j+1] == 'Y')) {
+                /* Assuming Year on 4 digit */
+                result[jj++] = '-';
+                if (jj < FMT_LEG_LEN - 2) {
+                    result[jj++] = '-';
+                    result[jj++] = '-';
+                    result[jj++] = '-';
+                }
+                j++; /* We skip the following char */
+            } else if (format[j+1] == 'R') {
+                result[jj++] = '-';
+                if (jj < FMT_LEG_LEN - 3) {
+                    result[jj++] = '-';
+                    result[jj++] = ':';
+                    result[jj++] = '-';
+                    result[jj++] = '-';
+                }
+                j++; /* We skip the following char */
+            } else if (format[j+1] == 'T') {
+                result[jj++] = '-';
+                if (jj < FMT_LEG_LEN - 6) {
+                    result[jj++] = '-';
+                    result[jj++] = ':';
+                    result[jj++] = '-';
+                    result[jj++] = '-';
+                    result[jj++] = ':';
+                    result[jj++] = '-';
+                    result[jj++] = '-';
+                }
+                j++; /* We skip the following char */
+            } else if (format[j+1] == 'F') {
+                result[jj++] = '-';
+                if (jj < FMT_LEG_LEN - 8) {
+                    result[jj++] = '-';
+                    result[jj++] = '-';
+                    result[jj++] = '-';
+                    result[jj++] = '-';
+                    result[jj++] = '-';
+                    result[jj++] = '-';
+                    result[jj++] = '-';
+                    result[jj++] = '-';
+                    result[jj++] = '-';
+                }
+                j++; /* We skip the following char */
+            } else if (format[j+1] == 'D') {
+                result[jj++] = '-';
+                if (jj < FMT_LEG_LEN - 6) {
+                    result[jj++] = '-';
+                    result[jj++] = '/';
+                    result[jj++] = '-';
+                    result[jj++] = '-';
+                    result[jj++] = '/';
+                    result[jj++] = '-';
+                    result[jj++] = '-';
+                }
+                j++; /* We skip the following char */
+            } else if (format[j+1] == 'n') {
+                result[jj++] = '\r';
+                result[jj++] = '\n';
+                j++; /* We skip the following char */
+            } else if (format[j+1] == 't') {
+                result[jj++] = '\t';
+                j++; /* We skip the following char */
+            } else if (format[j+1] == '%') {
+                result[jj++] = '%';
+                j++; /* We skip the following char */
+            } else if (format[j+1] == ' ') {
+                if (jj < FMT_LEG_LEN - 1) {
+                    result[jj++] = '%';
+                    result[jj++] = ' ';
+                }
+                j++; /* We skip the following char */
+            } else if (format[j+1] == '.') {
+                if (jj < FMT_LEG_LEN - 1) {
+                    result[jj++] = '%';
+                    result[jj++] = '.';
+                }
+                j++; /* We skip the following char */
+            } else if (format[j+1] == '@') {
+                if (jj < FMT_LEG_LEN - 1) {
+                    result[jj++] = '%';
+                    result[jj++] = '@';
+                }
+                j++; /* We skip the following char */
+            } else {
+                result[jj++] = '-';
+                j++; /* We skip the following char */
+            }
+        } else {
+                result[jj++] = format[j];
+        }
+    }
+    result[jj] = '\0'; /* We must force the end of the string */
 }
