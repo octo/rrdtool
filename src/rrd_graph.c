@@ -3266,8 +3266,8 @@ int graph_paint(
     int       i, ii;
     int       lazy = lazy_check(im);
     double    areazero = 0.0;
+    double    cum_height = 0.0;
     graph_desc_t *lastgdes = NULL;
-    graph_desc_t *p_data_below = NULL;
     rrd_infoval_t info;
 
 //    PangoFontMap *font_map = pango_cairo_font_map_get_default();
@@ -3549,7 +3549,6 @@ int graph_paint(
                     cairo_stroke(im->cr);
                     cairo_restore(im->cr);
                 } else if(im->gdes[i].gf == GF_AREA) {
-					printf("AREAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
 					double lastx=0;
 					double lasty=0;
                     int       idxI = -1;
@@ -3715,11 +3714,11 @@ int graph_paint(
                     free(backY);
                     free(backX);
                 }else if(im->gdes[i].gf == GF_HEAT){
-					printf("HEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAT");
 					/* PICKING HEAT COLOR*/
 					gfx_color_t color;
 					color = gfx_pick_heat_color(im->gdes[i].p_data[ii], im->gdes[i].col, im->gdes[i].col2);
-					printf("                       Color %0.0f,%0.0f,%0.0f,%0.0f\n", color.red, color.green, color.blue, color.alpha);
+					double lastx=0;
+					double lasty=0;
 
                     int       idxI = -1;
                     double   *foreY =
@@ -3731,7 +3730,7 @@ int graph_paint(
                     double   *backX =
                         (double *) malloc(sizeof(double) * im->xsize * 2);
                     int       drawem = 0;
-
+					
                     for (ii = 0; ii <= im->xsize; ii++) {
                         double    ybase, ytop;
 
@@ -3751,11 +3750,16 @@ int graph_paint(
                                                            [cntI + 1], 4)) {
                                 cntI++;
                             }
-							gfx_new_area(im,
-								 backX[0], backY[0],
-								 foreX[0], foreY[0],
-								 foreX[cntI],
-								 foreY[cntI], color);
+							if (im->gdes[i].gf != GF_GRAD) {
+								gfx_new_area(im,
+										 backX[0], backY[0],
+										 foreX[0], foreY[0],
+										 foreX[cntI],
+										 foreY[cntI], im->gdes[i].col);
+							} else {
+								lastx = foreX[cntI];
+								lasty = foreY[cntI];
+							}
 							while (cntI < idxI) {
                                 lastI = cntI;
                                 cntI++;
@@ -3772,8 +3776,31 @@ int graph_paint(
                                                                 + 1], 4)) {
                                     cntI++;
                                 }
-							gfx_add_point(im, foreX[cntI], foreY[cntI]);
-						    gfx_add_point(im, backX[idxI], backY[idxI]);
+								if (im->gdes[i].gf != GF_GRAD) { // Once for fore
+	                                gfx_add_point(im, foreX[cntI], foreY[cntI]);
+								} else {
+									gfx_add_rect_fadey(im, 
+										lastx, foreY[0],
+										foreX[cntI], foreY[cntI], lasty, 
+										im->gdes[i].col,
+										im->gdes[i].col2,
+										im->gdes[i].gradheight
+										);
+									lastx = foreX[cntI];
+									lasty = foreY[cntI];
+								}
+                            }
+							if (im->gdes[i].gf != GF_GRAD) { // And once for back
+                            	gfx_add_point(im, backX[idxI], backY[idxI]);
+							} else {
+								gfx_add_rect_fadey(im,
+									lastx, foreY[0],
+									backX[idxI], backY[idxI], lasty,
+									im->gdes[i].col,
+									im->gdes[i].col2,
+									im->gdes[i].gradheight);
+								lastx = backX[idxI];
+								lasty = backY[idxI];
 							}
                             while (idxI > 1) {
                                 lastI = idxI;
@@ -3791,11 +3818,23 @@ int graph_paint(
                                                                 - 1], 4)) {
                                     idxI--;
                                 }
-	                            gfx_add_point(im, backX[idxI], backY[idxI]);
+								if (im->gdes[i].gf != GF_GRAD) {
+	                                gfx_add_point(im, backX[idxI], backY[idxI]);
+								} else {
+									gfx_add_rect_fadey(im,
+										lastx, foreY[0],
+										backX[idxI], backY[idxI], lasty,
+										im->gdes[i].col,
+										im->gdes[i].col2,
+										im->gdes[i].gradheight);
+									lastx = backX[idxI];
+									lasty = backY[idxI];
+								}
                             }
                             idxI = -1;
                             drawem = 0;
-	                        gfx_close_path(im);
+							if (im->gdes[i].gf != GF_GRAD) 
+	                            gfx_close_path(im);
                         }
                         if (drawem != 0) {
                             drawem = 0;
@@ -3810,14 +3849,10 @@ int graph_paint(
                             drawem = 1;
                             continue;
                         }
-						// TODO double value = p_data_below->p_data[ii] + im->gdes[i].heat_height;
-						// TODO printf("Data before is %f\n Heat height is: %f\n Yvalue is %f\n", p_data_below->p_data[ii], im->gdes[i].heat_height, value);
-						double value = lastgdes->p_data[ii] + im->gdes[i].heat_height;
-						printf("Data before is %f\n Heat height is: %f\n Yvalue is %f\n", lastgdes->p_data[ii], im->gdes[i].heat_height, value);
+						double value = cum_height + im->gdes[i].heat_height;
 						ytop = ytr(im, value);
 						if (lastgdes && im->gdes[i].heat)
-							ybase = ytr(im, lastgdes->p_data[ii]);
-							// TODO ybase = ytr(im, p_data_below->p_data[ii]);
+							ybase = ytr(im, cum_height);
                         if (ybase == ytop) { // data value is 0
                             drawem = 1;
                             continue;
@@ -3845,24 +3880,21 @@ int graph_paint(
                     free(backY);
                     free(backX);
 				}       /* else if GF_HEAT */
-            } // if (im->gdes[i].col.alpha != 0.0)
+			} // if (im->gdes[i].col.alpha != 0.0)
             /* if color != 0x0 */
             /* make sure we do not run into trouble when stacking on NaN */
-			// TODO set this for STACK as well!!!
 			for (ii = 0; ii < im->xsize; ii++) {
                 if (isnan(im->gdes[i].p_data[ii])) {
-                    if (lastgdes && im->gdes[i].heat) {
+                    if (lastgdes && im->gdes[i].stack) {
                         im->gdes[i].p_data[ii] = lastgdes->p_data[ii];
                     } else {
                         im->gdes[i].p_data[ii] = areazero;
                     }
                 }
-            }
-			/*
-	        // TODO fill p_data_below 
-			for (ii = 0; ii < im->xsize; ii++){
-				p_data_below->p_data[ii] += im->gdes[i].p_data[ii];
-			}*/
+			}
+			if(im->gdes[i].gf == GF_HEAT){
+				cum_height = cum_height + im->gdes[i].heat_height;
+			}
 			lastgdes = &(im->gdes[i]);
             break;
         case GF_STACK:
@@ -3870,9 +3902,11 @@ int graph_paint(
                 ("STACK should already be turned into LINE or AREA here");
             return -1;
             break;
-	        }               /* switch */
+	    }               /* switch */
     }
     cairo_reset_clip(im->cr);
+	
+	
 
     /* grid_paint also does the text */
     if (!(im->extra_flags & ONLY_GRAPH))

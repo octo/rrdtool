@@ -190,7 +190,6 @@ typedef struct graph_desc_t {
     char    **ds_namv;  /* name of datasources  in the fetch. */
     rrd_value_t *data;  /* the raw data drawn from the rrd */
     rrd_value_t *p_data;    /* processed data, xsize elments */
-    rrd_value_t *p_data_below;    /* processed data before the current HEAT-map, xsize elments */
     double    linewidth;    /* linewideth */
 
     /* dashed line stuff */
