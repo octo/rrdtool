@@ -105,7 +105,7 @@ void gfx_add_point(
     cairo_line_to(cr, x, y);
 }
 
-/*TODO adds HEAT point */
+/* adds HEAT point */
 gfx_color_t gfx_pick_heat_color(
     double y,
 	gfx_color_t color1,

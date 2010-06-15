@@ -743,7 +743,7 @@ int rrd_parse_PVHLAST(
                 rrd_set_error("Cannot parse HEAT height '%s'", line);
                 return 1;
             }
-            dprintf("- found number %f\n", gdp->yrule);
+            dprintf("- found number %f\n", gdp->heat_height);
 			/*
             if (gdp->yrule > 1.0 || gdp->yrule < -1.0) {
                 rrd_set_error("HEAT factor should be <= 1.0");
@@ -753,7 +753,7 @@ int rrd_parse_PVHLAST(
             (*eaten) += j;
         } else {
             dprintf("- not found, defaulting to 1.0\n");
-            gdp->yrule = 1.0;
+            gdp->heat_height = 1.0;
         }
         if (line[*eaten] == '\0') {
             dprintf("- done parsing line\n");
@@ -1226,6 +1226,7 @@ void rrd_graph_script(
         case GF_VRULE: /* value#color[:legend] */
         case GF_HRULE: /* value#color[:legend] */
         case GF_LINE:  /* vname-or-value[#color[:legend]][:STACK] */
+        case GF_HEAT:  /* vname-or-value#color1#color2:height[:legend][:STACK] */
         case GF_AREA:  /* vname-or-value[#color[:legend]][:STACK] */
 		case GF_GRAD:  /* vname-or-value[#color[:legend][#color[:gradientheight]]][:STACK] */
         case GF_TICK:  /* vname#color[:num[:legend]] */
@@ -1247,20 +1248,7 @@ void rrd_graph_script(
             }
             break;
             /* data acquisition */
-        case GF_HEAT:  /* vname-or-value#color1#color2:height[:legend][:STACK] */
-            if (rrd_parse_PVHLAST(argv[i], &eaten, gdp, im))
-                return;
-            if (last_gf == GF_LINE || last_gf == GF_AREA || last_gf == GF_GRAD) {
-                gdp->gf = last_gf;
-                gdp->linewidth = last_linewidth;
-            } else {
-                rrd_set_error("HEAT must follow LINE or AREA! command:\n%s",
-                              &argv[i][eaten], argv[i]);
-                return;
-            }
-            break;
-            /* data acquisition */
-	case GF_DEF:   /* vname=x:DS:CF:[:step=#][:start=#][:end=#] */
+       	case GF_DEF:   /* vname=x:DS:CF:[:step=#][:start=#][:end=#] */
             if (rrd_parse_def(argv[i], &eaten, gdp, im))
                 return;
             break;
