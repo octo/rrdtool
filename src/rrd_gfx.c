@@ -124,7 +124,7 @@ gfx_color_t gfx_pick_heat_color(
 	color.green = color1.green;	
 	color.blue = color1.blue;
 	*/
-	printf("CALCULATING COLOR WITH VALUE %f\n", y);	
+	//printf("CALCULATING COLOR WITH VALUE %f\n", y);	
 	color.red = color1.red + (color2.red - color1.red)*y;	
 	color.green = color1.green + (color2.green - color1.green)*y;	
 	color.blue = color1.blue + (color2.blue - color1.blue)*y;

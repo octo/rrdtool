@@ -3729,18 +3729,17 @@ int graph_paint(
                         (double *) malloc(sizeof(double) * im->xsize * 2);
 					gfx_color_t *col = (gfx_color_t*) malloc(sizeof(gfx_color_t) * im->xsize * 2);
                     int       drawem = 0;
-					printf("											New GF");				
 	
                     for (ii = 0; ii <= im->xsize; ii++) {
                         double    ybase, ytop;
 						/* PICKING HEAT COLOR*/
 						
-						printf("Data %f\n", im->gdes[i].p_data[ii]);
+						//printf("Data %f\n", im->gdes[i].p_data[ii]);
 						color = gfx_pick_heat_color(im->gdes[i].p_data[ii], im->gdes[i].col, im->gdes[i].col2);
-						printf("Calculated color %0.0f,%0.0f,%0.0f,%0.0f\n", color.red,
-		                color.green, color.blue, color.alpha);
-						printf("color1 %0.0f,%0.0f,%0.0f,%0.0f\n", im->gdes[i].col.red, im->gdes[i].col.green, im->gdes[i].col.blue, im->gdes[i].col.alpha);
-						printf("color2 %0.0f,%0.0f,%0.0f,%0.0f\n", im->gdes[i].col2.red, im->gdes[i].col2.green, im->gdes[i].col2.blue, im->gdes[i].col2.alpha);
+						//printf("Calculated color %0.0f,%0.0f,%0.0f,%0.0f\n", color.red,
+		                //color.green, color.blue, color.alpha);
+						//printf("color1 %0.0f,%0.0f,%0.0f,%0.0f\n", im->gdes[i].col.red, im->gdes[i].col.green, im->gdes[i].col.blue, im->gdes[i].col.alpha);
+						//printf("color2 %0.0f,%0.0f,%0.0f,%0.0f\n", im->gdes[i].col2.red, im->gdes[i].col2.green, im->gdes[i].col2.blue, im->gdes[i].col2.alpha);
 						
 						
 					//	color = im->gdes[i].col2;
@@ -3815,11 +3814,19 @@ int graph_paint(
                             foreY[idxI] = ytop + 0.2;
                             foreX[idxI] = ii + im->xorigin - 1;
                         }
-                        backY[++idxI] = ybase - 0.2;
-                        backX[idxI] = ii + im->xorigin;
-                        foreY[idxI] = ytop + 0.2;
-                        foreX[idxI] = ii + im->xorigin;
-						col[idxI]=color;
+						if (i == 0){
+							backY[++idxI] = ybase - 0.2;
+							backX[idxI] = ii + im->xorigin;
+							foreY[idxI] = ytop + 0.2;
+							foreX[idxI] = ii + im->xorigin;
+							col[idxI]=color;
+						}else{
+							backY[++idxI] = ybase - 0.2 + 5;
+							backX[idxI] = ii + im->xorigin;
+							foreY[idxI] = ytop + 0.2;
+							foreX[idxI] = ii + im->xorigin;
+							col[idxI]=color;
+						}
                     }
                     free(foreY);
                     free(foreX);
@@ -3839,7 +3846,10 @@ int graph_paint(
                 }
 			}
 			if(im->gdes[i].gf == GF_HEAT){
-				cum_height = cum_height + im->gdes[i].heat_height;
+				if(i == 0)
+					cum_height = cum_height + im->gdes[i].heat_height;
+				else
+					cum_height = cum_height + im->gdes[i].heat_height + 5;
 			}
 			lastgdes = &(im->gdes[i]);
             break;
