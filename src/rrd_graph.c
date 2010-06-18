@@ -3747,7 +3747,7 @@ int graph_paint(
                         if (idxI > 0 && (drawem != 0 || ii == im->xsize)) {
                             int       cntI = 1;
                             int       lastI = 0;
-							for (cntI=1; cntI<=im->xsize; cntI++){
+							for (cntI=1; cntI<=(2*im->xsize); cntI++){
 								gfx_new_area(im, backX[cntI-1], backY[cntI-1], foreX[cntI-1], foreY[cntI-1], foreX[cntI], foreY[cntI], col[cntI]);
 								gfx_add_point(im, backX[cntI], backY[cntI]);
 								gfx_add_point(im, backX[cntI-1], backY[cntI-1]);
