@@ -447,6 +447,12 @@ void      gfx_add_point(
     double x,
     double y);
 
+void      gfx_add_heat_point(
+    image_desc_t *im,
+    double x,
+    double y,
+	gfx_color_t color);
+
 gfx_color_t gfx_pick_heat_color(
     double y,
     gfx_color_t color1,

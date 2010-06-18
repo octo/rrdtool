@@ -108,8 +108,8 @@ void gfx_add_point(
 /* adds HEAT point */
 gfx_color_t gfx_pick_heat_color(
     double y,
-	gfx_color_t color1,
-	gfx_color_t color2)
+	gfx_color_t color2,
+	gfx_color_t color1)
 {
 // TODO	if(isnan(y)){
 	if(y < 0.0)
@@ -118,10 +118,33 @@ gfx_color_t gfx_pick_heat_color(
 		y = 1.0;
 	
 	gfx_color_t color;
+	// color = color2;
+	/*
+	color.red = color1.red;	
+	color.green = color1.green;	
+	color.blue = color1.blue;
+	*/
+	printf("CALCULATING COLOR WITH VALUE %f\n", y);	
 	color.red = color1.red + (color2.red - color1.red)*y;	
 	color.green = color1.green + (color2.green - color1.green)*y;	
 	color.blue = color1.blue + (color2.blue - color1.blue)*y;
+	color.alpha = color1.alpha + (color2.alpha - color1.alpha)*y;
+	
 	return color;	
+}
+
+void gfx_add_heat_point(
+    image_desc_t *im,
+    double x,
+    double y, 
+	gfx_color_t color)
+{
+    cairo_t  *cr = im->cr;
+
+    gfx_area_fit(im, &x, &y);
+	cairo_set_source_rgba(cr, color.red, color.green, color.blue,
+                          color.alpha);
+    cairo_line_to(cr, x, y);
 }
 
 /* add a point to a line or to an area */

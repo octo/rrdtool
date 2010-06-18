@@ -3714,9 +3714,7 @@ int graph_paint(
                     free(backY);
                     free(backX);
                 }else if(im->gdes[i].gf == GF_HEAT){
-					/* PICKING HEAT COLOR*/
 					gfx_color_t color;
-					color = gfx_pick_heat_color(im->gdes[i].p_data[ii], im->gdes[i].col, im->gdes[i].col2);
 					double lastx=0;
 					double lasty=0;
 
@@ -3729,112 +3727,58 @@ int graph_paint(
                         (double *) malloc(sizeof(double) * im->xsize * 2);
                     double   *backX =
                         (double *) malloc(sizeof(double) * im->xsize * 2);
+					gfx_color_t *col = (gfx_color_t*) malloc(sizeof(gfx_color_t) * im->xsize * 2);
                     int       drawem = 0;
-					
+					printf("											New GF");				
+	
                     for (ii = 0; ii <= im->xsize; ii++) {
                         double    ybase, ytop;
-
+						/* PICKING HEAT COLOR*/
+						
+						printf("Data %f\n", im->gdes[i].p_data[ii]);
+						color = gfx_pick_heat_color(im->gdes[i].p_data[ii], im->gdes[i].col, im->gdes[i].col2);
+						printf("Calculated color %0.0f,%0.0f,%0.0f,%0.0f\n", color.red,
+		                color.green, color.blue, color.alpha);
+						printf("color1 %0.0f,%0.0f,%0.0f,%0.0f\n", im->gdes[i].col.red, im->gdes[i].col.green, im->gdes[i].col.blue, im->gdes[i].col.alpha);
+						printf("color2 %0.0f,%0.0f,%0.0f,%0.0f\n", im->gdes[i].col2.red, im->gdes[i].col2.green, im->gdes[i].col2.blue, im->gdes[i].col2.alpha);
+						
+						
+					//	color = im->gdes[i].col2;
                         if (idxI > 0 && (drawem != 0 || ii == im->xsize)) {
                             int       cntI = 1;
                             int       lastI = 0;
-
-                            while (cntI < idxI
-                                   &&
-                                   AlmostEqual2sComplement(foreY
-                                                           [lastI],
-                                                           foreY[cntI], 4)
-                                   &&
-                                   AlmostEqual2sComplement(foreY
-                                                           [lastI],
-                                                           foreY
-                                                           [cntI + 1], 4)) {
-                                cntI++;
-                            }
-							if (im->gdes[i].gf != GF_GRAD) {
-								gfx_new_area(im,
-										 backX[0], backY[0],
-										 foreX[0], foreY[0],
-										 foreX[cntI],
-										 foreY[cntI], im->gdes[i].col);
-							} else {
-								lastx = foreX[cntI];
-								lasty = foreY[cntI];
+							for (cntI=1; cntI<=im->xsize; cntI++){
+								gfx_new_area(im, backX[cntI-1], backY[cntI-1], foreX[cntI-1], foreY[cntI-1], foreX[cntI], foreY[cntI], col[cntI]);
+								gfx_add_point(im, backX[cntI], backY[cntI]);
+								gfx_add_point(im, backX[cntI-1], backY[cntI-1]);
+								gfx_close_path(im);
 							}
+							/*
+							gfx_new_area(im,
+								 backX[0], backY[0],
+								 foreX[0], foreY[0],
+								 foreX[cntI],
+								 foreY[cntI], color);
+							printf("						DRAWING WITH COLOR %0.0f,%0.0f,%0.0f,%0.0f\n", color.red,
+		                	color.green, color.blue, color.alpha);
 							while (cntI < idxI) {
                                 lastI = cntI;
                                 cntI++;
-                                while (cntI < idxI
-                                       &&
-                                       AlmostEqual2sComplement(foreY
-                                                               [lastI],
-                                                               foreY[cntI], 4)
-                                       &&
-                                       AlmostEqual2sComplement(foreY
-                                                               [lastI],
-                                                               foreY
-                                                               [cntI
-                                                                + 1], 4)) {
-                                    cntI++;
-                                }
-								if (im->gdes[i].gf != GF_GRAD) { // Once for fore
-	                                gfx_add_point(im, foreX[cntI], foreY[cntI]);
-								} else {
-									gfx_add_rect_fadey(im, 
-										lastx, foreY[0],
-										foreX[cntI], foreY[cntI], lasty, 
-										im->gdes[i].col,
-										im->gdes[i].col2,
-										im->gdes[i].gradheight
-										);
-									lastx = foreX[cntI];
-									lasty = foreY[cntI];
-								}
+								gfx_add_point(im, foreX[cntI], foreY[cntI]);
+								printf("Adding fore-point");
                             }
-							if (im->gdes[i].gf != GF_GRAD) { // And once for back
-                            	gfx_add_point(im, backX[idxI], backY[idxI]);
-							} else {
-								gfx_add_rect_fadey(im,
-									lastx, foreY[0],
-									backX[idxI], backY[idxI], lasty,
-									im->gdes[i].col,
-									im->gdes[i].col2,
-									im->gdes[i].gradheight);
-								lastx = backX[idxI];
-								lasty = backY[idxI];
-							}
+							gfx_add_point(im, backX[idxI], backY[idxI]);
                             while (idxI > 1) {
                                 lastI = idxI;
                                 idxI--;
-                                while (idxI > 1
-                                       &&
-                                       AlmostEqual2sComplement(backY
-                                                               [lastI],
-                                                               backY[idxI], 4)
-                                       &&
-                                       AlmostEqual2sComplement(backY
-                                                               [lastI],
-                                                               backY
-                                                               [idxI
-                                                                - 1], 4)) {
-                                    idxI--;
-                                }
-								if (im->gdes[i].gf != GF_GRAD) {
-	                                gfx_add_point(im, backX[idxI], backY[idxI]);
-								} else {
-									gfx_add_rect_fadey(im,
-										lastx, foreY[0],
-										backX[idxI], backY[idxI], lasty,
-										im->gdes[i].col,
-										im->gdes[i].col2,
-										im->gdes[i].gradheight);
-									lastx = backX[idxI];
-									lasty = backY[idxI];
-								}
+	                            gfx_add_point(im, backX[idxI], backY[idxI]);
+								printf("Adding fore-point");
                             }
                             idxI = -1;
                             drawem = 0;
 							if (im->gdes[i].gf != GF_GRAD) 
 	                            gfx_close_path(im);
+								printf("Closing path");*/
                         }
                         if (drawem != 0) {
                             drawem = 0;
@@ -3851,6 +3795,7 @@ int graph_paint(
                         }
 						double value = cum_height + im->gdes[i].heat_height;
 						ytop = ytr(im, value);
+						//printf("Ytop %f\n", ytop);
 						if (lastgdes && im->gdes[i].heat)
 							ybase = ytr(im, cum_height);
                         if (ybase == ytop) { // data value is 0
@@ -3874,6 +3819,7 @@ int graph_paint(
                         backX[idxI] = ii + im->xorigin;
                         foreY[idxI] = ytop + 0.2;
                         foreX[idxI] = ii + im->xorigin;
+						col[idxI]=color;
                     }
                     free(foreY);
                     free(foreX);
