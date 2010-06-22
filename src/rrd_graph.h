@@ -154,6 +154,7 @@ typedef struct graph_desc_t {
     enum gf_en gf;      /* graphing function */
     int       stack;    /* boolean */
     int       heat;    /* boolean */
+    int       h_gap;    /* boolean */
     int       debug;    /* boolean */
     char      vname[MAX_VNAME_LEN + 1]; /* name of the variable */
     long      vidx;     /* gdes reference */
@@ -229,6 +230,8 @@ typedef struct image_desc_t {
     double    tabwidth; /* tabwdith */
     time_t    start, end;   /* what time does the graph cover */
     unsigned long step; /* any preference for the default step ? */
+    float heat_gap; /* gap between the separate heat maps */
+    int h_gap; /* gap between the separate heat maps */
     rrd_value_t minval, maxval; /* extreme values in the data */
     int       rigid;    /* do not expand range even with 
                            values outside */
@@ -446,12 +449,6 @@ void      gfx_add_point(
     image_desc_t *im,
     double x,
     double y);
-
-void      gfx_add_heat_point(
-    image_desc_t *im,
-    double x,
-    double y,
-	gfx_color_t color);
 
 gfx_color_t gfx_pick_heat_color(
     double y,
