@@ -3566,8 +3566,8 @@ int graph_paint(
 							/* PICKING HEAT COLOR*/
 							color = 
 								gfx_pick_heat_color(im->gdes[i].p_data[ii], 
-													im->gdes[i].col, 
-													im->gdes[i].col2);
+													im->gdes[i].col2, 
+													im->gdes[i].col);
 							if(im->h_gap){	
 								backX = ii + im->xorigin;
 								backY = ytr(im, cum_height);

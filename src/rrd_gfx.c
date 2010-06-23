@@ -221,7 +221,7 @@ static PangoLayout *gfx_prep_text(
 
    cairo_new_path(cr);
    cairo_set_source_rgba(cr, color.red, color.green, color.blue,
-                          color.alpha);
+                         color.alpha);
 /*     layout = pango_cairo_create_layout(cr); */
 
 //    pango_cairo_context_set_font_options(pango_context, im->font_options);

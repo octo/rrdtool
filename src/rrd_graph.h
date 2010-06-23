@@ -500,7 +500,6 @@ double    gfx_get_text_width(
     double tabwidth,
     char *text);
 
-
 /* convert color */
 gfx_color_t gfx_hex_to_col(
     long unsigned int);
