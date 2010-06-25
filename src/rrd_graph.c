@@ -866,6 +866,7 @@ int data_fetch(
              * was specified, (try to) use the local file directly. */
             if (rrdc_is_connected (rrd_daemon))
             {
+				printf("Fetching from remote source");
                 status = rrdc_fetch (im->gdes[i].rrd,
                         cf_to_string (im->gdes[i].cf),
                         &im->gdes[i].start,
@@ -874,11 +875,14 @@ int data_fetch(
                         &im->gdes[i].ds_cnt,
                         &im->gdes[i].ds_namv,
                         &im->gdes[i].data);
+				printf("**************************ds_nam %s\n", im->gdes[i].ds_namv);
+				printf("########################## ds_cnt %lu\n", im->gdes[i].ds_cnt);
                 if (status != 0)
                     return (status);
             }
             else
             {
+				printf("Fetching from local file\n");
                 if ((rrd_fetch_fn(im->gdes[i].rrd,
                                 im->gdes[i].cf,
                                 &im->gdes[i].start,
@@ -887,8 +891,34 @@ int data_fetch(
                                 &im->gdes[i].ds_cnt,
                                 &im->gdes[i].ds_namv,
                                 &im->gdes[i].data)) == -1) {
-                    return -1;
+					im->gdes[i].ds_cnt = 1;
+					// TODO NOT LIKE THAT!!! im->gdes[i].ds_namv = (char *) im->gdes[i].ds_nam;
+					//TODO create ds_namv!!!
+					char **ds_namv;
+					ds_namv = calloc(im->gdes[i].ds_cnt, sizeof (char));
+					im->gdes[i].ds_namv = ds_namv;
+					int data_size = im->gdes[i].ds_cnt * (im->gdes[i].end 
+									- im->gdes[i].start)/im->gdes[i].step;
+					printf("data size is %d\n", data_size);
+				
+					rrd_value_t *data;
+					data = calloc (data_size, sizeof (rrd_value_t));
+					printf("ds_namv %s\n", im->gdes[i].ds_namv);
+
+					if(data == NULL)
+						printf("Could not allocate memory for data");
+					
+					im->gdes[i].data = data;
+					unsigned long int k = 0;
+					for (k = 0; k < data_size; k ++)
+					{
+						*data += k;
+						*data = DNAN;
+					}
+                    //return -1;
                 }
+				printf("step is %lu\n", im->gdes[i].step);
+				printf("ds_cnt is %lu\n", im->gdes[i].ds_cnt);
             }
             im->gdes[i].data_first = 1;
 
@@ -903,10 +933,15 @@ int data_fetch(
                 im->gdes[i].step = ft_step;
             }
         }
-
-        /* lets see if the required data source is really there */
+        
+		/* lets see if the required data source is really there */
+		printf("ds_cnt %lu\n", im->gdes[i].ds_cnt);
         for (ii = 0; ii < (int) im->gdes[i].ds_cnt; ii++) {
+			printf("ds_cnttttttttttttttttttttttttttt %lu\n", im->gdes[i].ds_cnt);
+			printf("ds_namv %s\n", im->gdes[i].ds_namv);
+			printf("ds_nam %s\n", im->gdes[i].ds_nam);
             if (strcmp(im->gdes[i].ds_namv[ii], im->gdes[i].ds_nam) == 0) {
+				printf("ds_cnt %lu\n", im->gdes[i].ds_cnt);
                 im->gdes[i].ds = ii;
             }
         }

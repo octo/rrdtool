@@ -900,6 +900,7 @@ int rrdc_fetch (const char *filename, /* {{{ */
   status = request (buffer, buffer_size, &res);
   if (status != 0)
     return (status);
+	
 
   status = res->status;
   if (status < 0)
