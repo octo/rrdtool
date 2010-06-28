@@ -153,7 +153,6 @@ typedef struct ylab_t {
 typedef struct graph_desc_t {
     enum gf_en gf;      /* graphing function */
     int       stack;    /* boolean */
-    int       heat;    /* boolean */
     int       h_gap;    /* boolean */
     int       debug;    /* boolean */
     char      vname[MAX_VNAME_LEN + 1]; /* name of the variable */
@@ -207,6 +206,8 @@ typedef struct image_desc_t {
     /* configuration of graph */
 
     char      graphfile[MAXPATH];   /* filename for graphic */
+    int       heat;    /* boolean */
+	double 	  tot_heat_height; /*total height of the heat-map*/
     long      xsize, ysize; /* graph area size in pixels */
     struct gfx_color_t graph_col[__GRC_END__];  /* real colors for the graph */
     text_prop_t text_prop[TEXT_PROP_LAST];  /* text properties */

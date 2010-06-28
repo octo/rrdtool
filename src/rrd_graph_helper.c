@@ -563,11 +563,6 @@ int rrd_parse_PVHLAST(
         gdp->stack = 1;
     }
    
-    // HEAT  
-    if (gdp->gf == GF_HEAT) {
-        gdp->heat = 1;
-    } // HEAT
-
     i = scan_for_col(&line[*eaten], MAX_VNAME_LEN + 9, tmpstr);
     if (line[*eaten + i] != '\0' && line[*eaten + i] != ':') {
         rrd_set_error("Cannot parse line '%s'", line);
@@ -743,6 +738,7 @@ int rrd_parse_PVHLAST(
                 rrd_set_error("Cannot parse HEAT height '%s'", line);
                 return 1;
             }
+			im->tot_heat_height += gdp->heat_height;
             dprintf("- found number %f\n", gdp->heat_height);
 			/*
             if (gdp->yrule > 1.0 || gdp->yrule < -1.0) {
@@ -850,7 +846,6 @@ int rrd_parse_PVHLAST(
         j = scan_for_col(&line[*eaten], 5, tmpstr);
         if (!strcmp("HEAT", tmpstr)) {
             dprintf("- found HEAT\n");
-            gdp->heat = 1;
             (*eaten) += j;
             if (line[*eaten] == ':') {
                 (*eaten) += 1;
@@ -1181,7 +1176,8 @@ void rrd_graph_script(
     int optno)
 {
     int       i;
-
+	im->tot_heat_height = 0;
+	
     /* save state for STACK backward compat function */
     enum gf_en last_gf = GF_PRINT;
     float     last_linewidth = 0.0;

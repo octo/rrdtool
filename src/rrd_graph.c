@@ -866,7 +866,7 @@ int data_fetch(
              * was specified, (try to) use the local file directly. */
             if (rrdc_is_connected (rrd_daemon))
             {
-				printf("Fetching from remote source");
+				printf("Fetching from remote source\n");
                 status = rrdc_fetch (im->gdes[i].rrd,
                         cf_to_string (im->gdes[i].cf),
                         &im->gdes[i].start,
@@ -1277,6 +1277,8 @@ int data_proc(
 			case GF_GRAD:
             case GF_TICK:
 	    	case GF_HEAT:
+				if(im->gdes[ii].gf == GF_HEAT)
+					im->heat = 1;
                 if (!im->gdes[ii].stack)
                     paintval = 0.0;
                 value = im->gdes[ii].yrule;
@@ -1312,6 +1314,8 @@ int data_proc(
 						im->gdes[ii].p_data[i] = paintval;
 					}else{
 						im->gdes[ii].p_data[i] = value;
+					//	im->maxval = 250.0;
+					//	printf("Maxval forced to %f\n", im->maxval);
 					}
                     /* GF_TICK: the data values are not
                      ** relevant for min and max
@@ -1338,6 +1342,11 @@ int data_proc(
         }
     }
 
+	if(im->heat)
+	{
+		im->maxval = im->tot_heat_height;
+	}
+
     /* if min or max have not been asigned a value this is because
        there was no data in the graph ... this is not good ...
        lets set these to dummy values then ... */
@@ -1358,6 +1367,8 @@ int data_proc(
             maxval = 1.0;
         }
     }
+
+	
 
     /* adjust min and max values given by the user */
     /* for logscale we add something on top */
@@ -1681,7 +1692,7 @@ int print_calc(
             break;
         case GF_LINE:
         case GF_AREA:
-        case GF_HEAT:
+        case GF_HEAT: // TODO This shouldn't be here!!! Figure out how to do it!
 		case GF_GRAD:
         case GF_TICK:
             graphelement = 1;
@@ -3479,6 +3490,15 @@ int graph_paint(
         case GF_AREA:
 			case GF_GRAD:
 		case GF_HEAT:
+			/*Calculate maxval in case heat-map*/
+			/*
+			if(im->gdes[i].gf == GF_HEAT)
+			{
+				im->maxval = im->gdes_c * im->gdes[i].heat_height;
+				printf("Number of graphics elements %ld\n", im->gdes_c);
+				printf("Heat height %f\n", im->gdes[i].heat_height);
+				printf("maxval for heat-map %f\n", im->maxval);
+			}*/
             /* fix data points at infinity and -infinity */
             for (ii = 0; ii < im->xsize; ii++) {
                 if (isinf(im->gdes[i].p_data[ii])) {
@@ -3927,7 +3947,6 @@ int gdes_alloc(
     im->gdes[im->gdes_c - 1].step = im->step;
     im->gdes[im->gdes_c - 1].step_orig = im->step;
     im->gdes[im->gdes_c - 1].stack = 0;
-    im->gdes[im->gdes_c - 1].heat = 0; //HEAT
     im->gdes[im->gdes_c - 1].linewidth = 0;
     im->gdes[im->gdes_c - 1].debug = 1;
     im->gdes[im->gdes_c - 1].start = im->start;
