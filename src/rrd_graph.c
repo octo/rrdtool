@@ -860,7 +860,6 @@ int data_fetch(
              * iteration, no actual new connection is established - the
              * existing connection is re-used. */
             rrdc_connect (rrd_daemon);
-
             /* If connecting was successfull, use the daemon to query the data.
              * If there is no connection, for example because no daemon address
              * was specified, (try to) use the local file directly. */
@@ -876,7 +875,8 @@ int data_fetch(
                         &im->gdes[i].ds_namv,
                         &im->gdes[i].data);
                 if (status != 0)
-                    return (status);
+					fake_data_fetch(im, i);
+                    //return (status);
             }
             else
             {
@@ -889,31 +889,7 @@ int data_fetch(
                                 &im->gdes[i].ds_cnt,
                                 &im->gdes[i].ds_namv,
                                 &im->gdes[i].data)) == -1) {
-				printf("############### GENERATING FAKE DATA ################\n");
-				im->gdes[i].ds_cnt = 1;
-				im->gdes[i].ds_namv = calloc(im->gdes[i].ds_cnt, DS_NAM_SIZE * sizeof (char));	
-				for (int l = 0; l < (int) im->gdes[i].ds_cnt; l++)
-				{
-					printf("ds_nam %s \n", im->gdes[i].ds_nam);
-					im->gdes[i].ds_namv[l] = im->gdes[i].ds_nam;
-					printf("ds_namv %s \n", im->gdes[i].ds_namv[l]);			
-				}
-
-				unsigned long int data_size = im->gdes[i].ds_cnt * (im->gdes[i].end
-								- im->gdes[i].start)/im->gdes[i].step;
-				rrd_value_t *data;
-				data = (rrd_value_t *) calloc (data_size, sizeof (rrd_value_t));
-
-				if(data == NULL)
-					printf("Could not allocate memory for data");
-
-				im->gdes[i].data = data;
-				unsigned long int k = 0;
-				for (k = 0; k < data_size; k ++)
-				{
-					*data = DNAN;
-					*data += k;
-				}
+				fake_data_fetch(im, i);
                 // return -1;
                 }
             }	
@@ -946,6 +922,35 @@ int data_fetch(
 
     }
     return 0;
+}
+
+int fake_data_fetch(
+    image_desc_t *im, int i)
+{
+	printf("############### GENERATING FAKE DATA ################\n");
+	im->gdes[i].ds_cnt = 1;
+	im->gdes[i].ds_namv = calloc(im->gdes[i].ds_cnt, DS_NAM_SIZE * sizeof (char));	
+	for (int l = 0; l < (int) im->gdes[i].ds_cnt; l++)
+	{
+		im->gdes[i].ds_namv[l] = im->gdes[i].ds_nam;
+	}
+
+	unsigned long int data_size = im->gdes[i].ds_cnt * (im->gdes[i].end
+				- im->gdes[i].start)/im->gdes[i].step;
+	rrd_value_t *data;
+	data = (rrd_value_t *) calloc (data_size, sizeof (rrd_value_t));
+
+	if(data == NULL)
+		printf("Could not allocate memory for data");
+
+	im->gdes[i].data = data;
+	unsigned long int k = 0;
+	for (k = 0; k < data_size; k ++)
+	{
+		*data = DNAN;
+		*data += k;
+	}
+	return 0;
 }
 
 /* evaluate the expressions in the CDEF functions */

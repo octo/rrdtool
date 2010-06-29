@@ -59,6 +59,7 @@ static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 static int sd = -1;
 static FILE *sh = NULL;
 static char *sd_path = NULL; /* cache the path for sd */
+int fake = 0; /* Flag. If true - generate fake data*/
 
 /* get_path: Return a path name appropriate to be sent to the daemon.
  *
@@ -497,6 +498,13 @@ static int rrdc_connect_unix (const char *path) /* {{{ */
   struct sockaddr_un sa;
   int status;
 
+	/* These are for timeout handling */
+	int valopt; 
+  long arg; 
+  fd_set myset; 
+  struct timeval tv; 
+  socklen_t lon; 
+
   assert (path != NULL);
   assert (sd == -1);
 
@@ -506,18 +514,60 @@ static int rrdc_connect_unix (const char *path) /* {{{ */
     status = errno;
     return (status);
   }
+	// Set non-blocking
+	arg = fcntl(sd, F_GETFL, NULL); 
+	arg |= O_NONBLOCK; 
+ 	fcntl(sd, F_SETFL, arg);
+
+		/* Set timeout with socket options did not work
+	int sock_val = 1;
+	setsockopt(sd, SOL_SOCKET, SO_RCVTIMEO, &sock_val, sizeof(sock_val));
+	setsockopt(sd, SOL_SOCKET, SO_SNDTIMEO, &sock_val, sizeof(sock_val));
+	printf("Timeout set to 1");
+	*/
 
   memset (&sa, 0, sizeof (sa));
   sa.sun_family = AF_UNIX;
   strncpy (sa.sun_path, path, sizeof (sa.sun_path) - 1);
 
   status = connect (sd, (struct sockaddr *) &sa, sizeof (sa));
+//	printf("Connected");
+	/*
   if (status != 0)
   {
     status = errno;
     close_connection ();
     return (status);
-  }
+  }*/
+	
+	// Trying to connect with timeout
+	if (status < 0) { 
+   	if (errno == EINPROGRESS) { 
+      tv.tv_sec = 1; 
+      tv.tv_usec = 0; 
+      FD_ZERO(&myset); 
+      FD_SET(sd, &myset); 
+      if (select(sd+1, NULL, &myset, NULL, &tv) > 0) { 
+      	lon = sizeof(int); 
+       	getsockopt(sd, SOL_SOCKET, SO_ERROR, (void*)(&valopt), &lon); 
+       	if (valopt) { 
+       		fprintf(stderr, "Error in connection() %d - %s\n", valopt, strerror(valopt)); 
+					fake = 1; 
+        } 
+			}	else { 
+       	fprintf(stderr, "Timeout or error() %d - %s\n", valopt, strerror(valopt)); 
+				fake = 1;
+      } 
+		} else { 
+			fprintf(stderr, "Error connecting %d - %s\n", errno, strerror(errno)); 
+      exit(0); 
+		} 
+	} 
+
+	// Set to blocking mode again... 
+	arg = fcntl(sd, F_GETFL, NULL); 
+	arg &= (~O_NONBLOCK); 
+	fcntl(sd, F_SETFL, arg);
 
   sh = fdopen (sd, "r+");
   if (sh == NULL)
@@ -530,6 +580,7 @@ static int rrdc_connect_unix (const char *path) /* {{{ */
   return (0);
 } /* }}} int rrdc_connect_unix */
 
+
 static int rrdc_connect_network (const char *addr_orig) /* {{{ */
 {
   struct addrinfo ai_hints;
@@ -538,10 +589,15 @@ static int rrdc_connect_network (const char *addr_orig) /* {{{ */
   char addr_copy[NI_MAXHOST];
   char *addr;
   char *port;
-
+	/* These are for timeout handling */
+	int valopt; 
+  long arg; 
+  fd_set myset; 
+  struct timeval tv; 
+  socklen_t lon; 
   assert (addr_orig != NULL);
   assert (sd == -1);
-
+	
   strncpy(addr_copy, addr_orig, sizeof(addr_copy));
   addr_copy[sizeof(addr_copy) - 1] = '\0';
   addr = addr_copy;
@@ -604,6 +660,8 @@ static int rrdc_connect_network (const char *addr_orig) /* {{{ */
 
   for (ai_ptr = ai_res; ai_ptr != NULL; ai_ptr = ai_ptr->ai_next)
   {
+		fake = 0;	
+		// Create sockets
     sd = socket (ai_ptr->ai_family, ai_ptr->ai_socktype, ai_ptr->ai_protocol);
     if (sd < 0)
     {
@@ -611,14 +669,56 @@ static int rrdc_connect_network (const char *addr_orig) /* {{{ */
       sd = -1;
       continue;
     }
+		// Set non-blocking
+		arg = fcntl(sd, F_GETFL, NULL); 
+	  arg |= O_NONBLOCK; 
+  	fcntl(sd, F_SETFL, arg);
 
+		/* Set timeout with socket options did not work
+		int sock_val = 1;
+		setsockopt(sd, SOL_SOCKET, SO_RCVTIMEO, &sock_val, sizeof(sock_val) < 0);
+		setsockopt(sd, SOL_SOCKET, SO_SNDTIMEO, &sock_val, sizeof(sock_val) < 0);
+		printf("Timeout set to 1 sec\n");
+		*/
+		
+		// Trying to connect with timeout
     status = connect (sd, ai_ptr->ai_addr, ai_ptr->ai_addrlen);
-    if (status != 0)
+		/*
+		if (status != 0)
     {
       status = errno;
       close_connection();
       continue;
-    }
+    }*/
+		if (status < 0) { 
+    	if (errno == EINPROGRESS) { 
+        tv.tv_sec = 3; 
+        tv.tv_usec = 0; 
+        FD_ZERO(&myset); 
+        FD_SET(sd, &myset); 
+        if (select(sd+1, NULL, &myset, NULL, &tv) > 0) { 
+        	lon = sizeof(int); 
+        	getsockopt(sd, SOL_SOCKET, SO_ERROR, (void*)(&valopt), &lon); 
+        	if (valopt) {
+       			fprintf(stderr, "Error in connection() %d - %s\n", valopt, strerror(valopt)); 
+						fake = 1;
+          } 
+				}	else {
+       		fprintf(stderr, "Timeout or error() %d - %s\n", valopt, strerror(valopt)); 
+					fake = 1; 
+        } 
+			} else { 
+				fprintf(stderr, "Error connecting %d - %s\n", errno, strerror(errno)); 
+        exit(0); 
+			} 
+		// TODO Will this cause problems??? Does this really ensure that status will become 0 only if the server actually responded?
+		status = 0;
+		} 
+
+		// Set to blocking mode again... 
+		arg = fcntl(sd, F_GETFL, NULL); 
+		arg &= (~O_NONBLOCK); 
+		fcntl(sd, F_SETFL, arg); 
 
     sh = fdopen (sd, "r+");
     if (sh == NULL)
@@ -846,6 +946,12 @@ int rrdc_fetch (const char *filename, /* {{{ */
   int status;
   size_t current_line;
   time_t t;
+
+	if(fake)
+	{
+		status = 1;
+		return(status);
+	}
 
   if ((filename == NULL) || (cf == NULL))
     return (-1);

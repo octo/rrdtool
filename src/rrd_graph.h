@@ -328,6 +328,8 @@ void      reduce_data(
     rrd_value_t **);
 int       data_fetch(
     image_desc_t *);
+int       fake_data_fetch(
+    image_desc_t *, int);
 long      find_var(
     image_desc_t *,
     char *);

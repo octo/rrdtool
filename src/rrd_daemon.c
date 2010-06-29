@@ -1498,6 +1498,8 @@ static int handle_request_fetch (HANDLER_PROTO) /* {{{ */
   cf = NULL;
   start_str = NULL;
   end_str = NULL;
+	//printf("************************ SLEEPING FOR 30 SECONDS************************");
+	//sleep(30);
 
   /* Read the arguments */
   do /* while (0) */
