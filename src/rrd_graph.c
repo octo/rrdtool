@@ -850,10 +850,13 @@ int data_fetch(
             const char *rrd_daemon;
             int status;
 
-            if (im->gdes[i].daemon[0] != 0)
+            if (im->gdes[i].daemon[0] != 0){
+				printf("That's what's going onnn!");
                 rrd_daemon = im->gdes[i].daemon;
-            else
+			}else{
+				printf("The other thing's going onnn!");
                 rrd_daemon = im->daemon_addr;
+			}
 
             /* "daemon" may be NULL. ENV_RRDCACHED_ADDRESS is evaluated in that
              * case. If "daemon" holds the same value as in the previous
@@ -866,6 +869,7 @@ int data_fetch(
             if (rrdc_is_connected (rrd_daemon))
             {
 				printf("Fetching from remote source\n");
+				printf("PRINT SOMETHING!!!");
                 status = rrdc_fetch (im->gdes[i].rrd,
                         cf_to_string (im->gdes[i].cf),
                         &im->gdes[i].start,
