@@ -885,6 +885,7 @@ int data_fetch(
             else
             {
 	 			printf("Fetching from local file\n");
+				printf("PRINT SOMETHING!!!");
                 if ((rrd_fetch_fn(im->gdes[i].rrd,
                                 im->gdes[i].cf,
                                 &im->gdes[i].start,
