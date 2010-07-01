@@ -851,10 +851,8 @@ int data_fetch(
             int status;
 
             if (im->gdes[i].daemon[0] != 0){
-				printf("That's what's going onnn!");
                 rrd_daemon = im->gdes[i].daemon;
 			}else{
-				printf("The other thing's going onnn!");
                 rrd_daemon = im->daemon_addr;
 			}
 
@@ -869,7 +867,6 @@ int data_fetch(
             if (rrdc_is_connected (rrd_daemon))
             {
 				printf("Fetching from remote source\n");
-				printf("PRINT SOMETHING!!!");
                 status = rrdc_fetch (im->gdes[i].rrd,
                         cf_to_string (im->gdes[i].cf),
                         &im->gdes[i].start,
@@ -885,7 +882,6 @@ int data_fetch(
             else
             {
 	 			printf("Fetching from local file\n");
-				printf("PRINT SOMETHING!!!");
                 if ((rrd_fetch_fn(im->gdes[i].rrd,
                                 im->gdes[i].cf,
                                 &im->gdes[i].start,
