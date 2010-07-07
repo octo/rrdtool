@@ -543,7 +543,7 @@ static int rrdc_connect_unix (const char *path) /* {{{ */
 	// Trying to connect with timeout
 	if (status < 0) { 
    	if (errno == EINPROGRESS) { 
-      tv.tv_sec = 1; 
+      tv.tv_sec = 5; 
       tv.tv_usec = 0; 
       FD_ZERO(&myset); 
       FD_SET(sd, &myset); 
@@ -663,6 +663,7 @@ static int rrdc_connect_network (const char *addr_orig) /* {{{ */
 		fake = 0;	
 		// Create sockets
     sd = socket (ai_ptr->ai_family, ai_ptr->ai_socktype, ai_ptr->ai_protocol);
+		printf("Socket descriptor %d\n", sd);
     if (sd < 0)
     {
       status = errno;

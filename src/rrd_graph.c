@@ -851,8 +851,10 @@ int data_fetch(
             int status;
 
             if (im->gdes[i].daemon[0] != 0){
+				printf("In DEF\n");
                 rrd_daemon = im->gdes[i].daemon;
 			}else{
+				printf("RRDcached\n");
                 rrd_daemon = im->daemon_addr;
 			}
 
@@ -877,7 +879,6 @@ int data_fetch(
                         &im->gdes[i].data);
                 if (status != 0)
 					fake_data_fetch(im, i);
-                    //return (status);
             }
             else
             {
@@ -891,7 +892,6 @@ int data_fetch(
                                 &im->gdes[i].ds_namv,
                                 &im->gdes[i].data)) == -1) {
 				fake_data_fetch(im, i);
-                // return -1;
                 }
             }	
             im->gdes[i].data_first = 1;
@@ -914,8 +914,8 @@ int data_fetch(
                 im->gdes[i].ds = ii;
             }
         }
+		printf("DS %ld \n", im->gdes[i].ds);	
         if (im->gdes[i].ds == -1) {
-			printf("No DS called");
             rrd_set_error("No DS called '%s' in '%s'",
                           im->gdes[i].ds_nam, im->gdes[i].rrd);
             return -1;
@@ -3496,16 +3496,7 @@ int graph_paint(
         case GF_AREA:
 			case GF_GRAD:
 		case GF_HEAT:
-			/*Calculate maxval in case heat-map*/
-			/*
-			if(im->gdes[i].gf == GF_HEAT)
-			{
-				im->maxval = im->gdes_c * im->gdes[i].heat_height;
-				printf("Number of graphics elements %ld\n", im->gdes_c);
-				printf("Heat height %f\n", im->gdes[i].heat_height);
-				printf("maxval for heat-map %f\n", im->maxval);
-			}*/
-            /* fix data points at infinity and -infinity */
+	       /* fix data points at infinity and -infinity */
             for (ii = 0; ii < im->xsize; ii++) {
                 if (isinf(im->gdes[i].p_data[ii])) {
                     if (im->gdes[i].p_data[ii] > 0) {
@@ -3642,17 +3633,7 @@ int graph_paint(
 							gfx_line_fit(im, &foreX, &foreY);
 							cairo_line_to(im->cr, foreX, foreY);
 							draw_on = 1;
-						}/*else{ 
-							backX = ii + im->xorigin;
-							backY = ytr(im, cum_height);
-							foreX = ii + im->xorigin;
-							foreY = ytr(im, cum_height);							
-
-							gfx_line_fit(im, &backX, &backY);
-							cairo_move_to(im->cr, backX, backY);
-							gfx_line_fit(im, &foreX, &foreY);
-							cairo_line_to(im->cr, foreX, foreY);
-						}*/
+						}
 						cairo_set_line_cap(im->cr, CAIRO_LINE_CAP_ROUND);
 						cairo_set_line_join(im->cr, CAIRO_LINE_JOIN_ROUND);
 						cairo_stroke(im->cr);

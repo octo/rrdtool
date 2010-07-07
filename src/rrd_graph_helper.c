@@ -740,12 +740,6 @@ int rrd_parse_PVHLAST(
             }
 			im->tot_heat_height += gdp->heat_height;
             dprintf("- found number %f\n", gdp->heat_height);
-			/*
-            if (gdp->yrule > 1.0 || gdp->yrule < -1.0) {
-                rrd_set_error("HEAT factor should be <= 1.0");
-                return 1;
-            }
-			*/
             (*eaten) += j;
         } else {
             dprintf("- not found, defaulting to 1.0\n");
@@ -758,7 +752,7 @@ int rrd_parse_PVHLAST(
             if (line[*eaten] == ':') {
                 (*eaten)++;
             } else {
-                rrd_set_error("This HEAT line does not make sense");
+                rrd_set_error("Can't make sense of that HEAT line.");
                 return 1;
             }
         }
@@ -836,32 +830,6 @@ int rrd_parse_PVHLAST(
             dprintf("- not STACKing\n");
     }
    
-
-   // HEAT
-   if ((gdp->gf != GF_HRULE)
-        && (gdp->gf != GF_VRULE)
-        && (gdp->gf != GF_TICK)) {
-
-        dprintf("- parsing '%s', looking for HEAT\n", &line[*eaten]);
-        j = scan_for_col(&line[*eaten], 5, tmpstr);
-        if (!strcmp("HEAT", tmpstr)) {
-            dprintf("- found HEAT\n");
-            (*eaten) += j;
-            if (line[*eaten] == ':') {
-                (*eaten) += 1;
-            } else if (line[*eaten] == '\0') {
-                dprintf("- done parsing line\n");
-                return 0;
-            } else {
-                dprintf("- found %s instead of just HEAT\n", &line[*eaten]);
-                rrd_set_error("HEAT expected but %s found", &line[*eaten]);
-                return 1;
-            }
-        } else
-            dprintf("- not STACKing\n");
-    } // HEAT
-
-
     dprintf("- still more, should be dashes[=...]\n");
     dprintf("- parsing '%s'\n", &line[*eaten]);
     if (line[*eaten] != '\0') {

@@ -111,7 +111,6 @@ gfx_color_t gfx_pick_heat_color(
 	gfx_color_t color2,
 	gfx_color_t color1)
 {
-// TODO	if(isnan(y)){
 	if(y < 0.0)
 		y = 0.0;
 	if(y > 1.0)
