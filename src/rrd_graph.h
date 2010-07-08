@@ -25,11 +25,11 @@
 #  define MAXPATH MAX_PATH
 #endif
 
-#define ALTYGRID  	 0x01   /* use alternative y grid algorithm */
-#define ALTAUTOSCALE	 0x02   /* use alternative algorithm to find lower and upper bounds */
+#define ALTYGRID     0x01   /* use alternative y grid algorithm */
+#define ALTAUTOSCALE     0x02   /* use alternative algorithm to find lower and upper bounds */
 #define ALTAUTOSCALE_MIN 0x04   /* use alternative algorithm to find lower bounds */
 #define ALTAUTOSCALE_MAX 0x08   /* use alternative algorithm to find upper bounds */
-#define NOLEGEND	 0x10   /* use no legend */
+#define NOLEGEND     0x10   /* use no legend */
 #define NOMINOR          0x20   /* Turn off minor gridlines */
 #define ONLY_GRAPH       0x40   /* use only graph */
 #define FORCE_RULES_LEGEND 0x80 /* force printing of HRULE and VRULE legend */
@@ -164,7 +164,7 @@ typedef struct graph_desc_t {
     enum cf_en cf;      /* consolidation function */
     enum cf_en cf_reduce;   /* consolidation function for reduce_data() */
     struct gfx_color_t col, col2; /* graph color */
-	double    gradheight;
+    double    gradheight;
     char      format[FMT_LEG_LEN + 5];  /* format for PRINT AND GPRINT */
     char      legend[FMT_LEG_LEN + 5];  /* legend */
     int       strftm;   /* should the VDEF legend be formated with strftime */
@@ -207,7 +207,7 @@ typedef struct image_desc_t {
 
     char      graphfile[MAXPATH];   /* filename for graphic */
     int       heat;    /* boolean */
-	double 	  tot_heat_height; /*total height of the heat-map*/
+    double    tot_heat_height; /*total height of the heat-map*/
     long      xsize, ysize; /* graph area size in pixels */
     struct gfx_color_t graph_col[__GRC_END__];  /* real colors for the graph */
     text_prop_t text_prop[TEXT_PROP_LAST];  /* text properties */
@@ -232,6 +232,7 @@ typedef struct image_desc_t {
     time_t    start, end;   /* what time does the graph cover */
     unsigned long step; /* any preference for the default step ? */
     float heat_gap; /* gap between the separate heat maps */
+    float heat_base; /* user defineable base for the first bar */
     int h_gap; /* gap between the separate heat maps */
     rrd_value_t minval, maxval; /* extreme values in the data */
     int       rigid;    /* do not expand range even with 
@@ -460,21 +461,21 @@ gfx_color_t gfx_pick_heat_color(
 
 /* create a rect that has a gradient from color1 to color2 in height pixels 
  * height > 0:
- * 		gradient starts at top and goes down a fixed number of pixels (fire style)
+ *      gradient starts at top and goes down a fixed number of pixels (fire style)
  * height < 0:
- * 		gradient starts at bottom and goes up a fixed number of pixels (constant style)
+ *      gradient starts at bottom and goes up a fixed number of pixels (constant style)
  * height == 0:
- * 		gradient is stretched between two points
+ *      gradient is stretched between two points
  */
 void gfx_add_rect_fadey(
     image_desc_t *im,
     double x1,double y1,
     double x2,double y2,
-	double py,
+    double py,
     gfx_color_t color1,
-	gfx_color_t color2,
-	double height);
-				
+    gfx_color_t color2,
+    double height);
+                
 
 
 /* close current path so it ends at the same point as it started */

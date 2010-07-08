@@ -38,15 +38,15 @@
 #   endif
 # endif
 #else
-#	include <stdlib.h>
-	typedef signed char 	int8_t;
-	typedef unsigned char 	uint8_t;
-	typedef signed int 	int16_t;
-	typedef unsigned int 	uint16_t;
-	typedef signed long int 	int32_t;
-	typedef unsigned long int 	uint32_t;
-	typedef signed long long int 	int64_t;
-	typedef unsigned long long int 	uint64_t;
+#   include <stdlib.h>
+    typedef signed char     int8_t;
+    typedef unsigned char   uint8_t;
+    typedef signed int  int16_t;
+    typedef unsigned int    uint16_t;
+    typedef signed long int     int32_t;
+    typedef unsigned long int   uint32_t;
+    typedef signed long long int    int64_t;
+    typedef unsigned long long int  uint64_t;
 #endif
 
 
@@ -80,11 +80,11 @@ int rrdc_fetch (const char *filename,
     rrd_value_t **ret_data);
 
 #else
-#	define rrdc_flush_if_daemon(a,b) 0
-#	define rrdc_connect(a) 0
-#	define rrdc_is_connected(a) 0
-#	define rrdc_flush(a) 0
-#	define rrdc_update(a,b,c) 0
+#   define rrdc_flush_if_daemon(a,b) 0
+#   define rrdc_connect(a) 0
+#   define rrdc_is_connected(a) 0
+#   define rrdc_flush(a) 0
+#   define rrdc_update(a,b,c) 0
 #endif
 
 struct rrdc_stats_s
