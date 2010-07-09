@@ -334,6 +334,7 @@ struct gfx_color_t gfx_hex_to_col(
 }
 
 /* gridfit_lines */
+/*  http://cairographics.org/FAQ/#sharp_lines */
 
 void gfx_line_fit(
     image_desc_t *im,
@@ -343,7 +344,6 @@ void gfx_line_fit(
     cairo_t  *cr = im->cr;
     double    line_width;
     double    line_height;
-
     if (!im->gridfit)
         return;
     cairo_user_to_device(cr, x, y);

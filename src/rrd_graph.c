@@ -925,10 +925,11 @@ int fake_data_fetch(
 {
     printf("############### GENERATING FAKE DATA ################\n");
     im->gdes[i].ds_cnt = 1;
-    im->gdes[i].ds_namv = calloc(im->gdes[i].ds_cnt, DS_NAM_SIZE * sizeof (char));  
-    for (int l = 0; l < (int) im->gdes[i].ds_cnt; l++)
-    {
-        im->gdes[i].ds_namv[l] = im->gdes[i].ds_nam;
+
+    im->gdes[i].ds_namv = calloc(im->gdes[i].ds_cnt, sizeof(char*));
+    for (int l = 0; l < (int) im->gdes[i].ds_cnt; l++) {
+        im->gdes[i].ds_namv[l] = (char*)malloc(sizeof(char) * DS_NAM_SIZE);
+        strncpy(im->gdes[i].ds_namv[l], im->gdes[i].ds_nam, DS_NAM_SIZE - 1);
     }
 
     unsigned long int data_size = im->gdes[i].ds_cnt * (im->gdes[i].end
@@ -1278,8 +1279,9 @@ int data_proc(
             case GF_GRAD:
             case GF_TICK:
             case GF_HEAT:
-                if(im->gdes[ii].gf == GF_HEAT)
+                if(im->gdes[ii].gf == GF_HEAT){
                     im->heat = 1;
+                }        
                 if (!im->gdes[ii].stack)
                     paintval = 0.0;
                 value = im->gdes[ii].yrule;
@@ -1315,8 +1317,6 @@ int data_proc(
                         im->gdes[ii].p_data[i] = paintval;
                     }else{
                         im->gdes[ii].p_data[i] = value;
-                    //  im->maxval = 250.0;
-                    //  printf("Maxval forced to %f\n", im->maxval);
                     }
                     /* GF_TICK: the data values are not
                      ** relevant for min and max
@@ -2848,32 +2848,61 @@ void grid_paint(
                     gfx_close_path(im);
         } else {
         /* make sure transparent colors show up the same way as in the graph */
-            gfx_new_area(im,
-                     X0, Y0 - boxV,
-                     X0, Y0, X0 + boxH, Y0, im->graph_col[GRC_BACK]);
-            gfx_add_point(im, X0 + boxH, Y0 - boxV);
-            gfx_close_path(im);
-            gfx_new_area(im, X0, Y0 - boxV, X0,
-                     Y0, X0 + boxH, Y0, im->gdes[i].col);
-            gfx_add_point(im, X0 + boxH, Y0 - boxV);
-            gfx_close_path(im);
-            cairo_save(im->cr);
-            cairo_new_path(im->cr);
-            cairo_set_line_width(im->cr, 1.0);
-            X1 = X0 + boxH;
-            Y1 = Y0 - boxV;
-            gfx_line_fit(im, &X0, &Y0);
-            gfx_line_fit(im, &X1, &Y1);
-            cairo_move_to(im->cr, X0, Y0);
-            cairo_line_to(im->cr, X1, Y0);
-            cairo_line_to(im->cr, X1, Y1);
-            cairo_line_to(im->cr, X0, Y1);
-            cairo_close_path(im->cr);
-            cairo_set_source_rgba(im->cr,
-                          im->graph_col[GRC_FRAME].red,
-                          im->graph_col[GRC_FRAME].green,
-                          im->graph_col[GRC_FRAME].blue,
-                          im->graph_col[GRC_FRAME].alpha);
+            if (im->gdes[i].gf == GF_HEAT){
+                gfx_color_t color;
+                gfx_new_area(im,
+                             X0, Y0 - boxV,
+                             X0, Y0, X0 + boxH, Y0, im->graph_col[GRC_BACK]);
+                cairo_save(im->cr);
+                for(int f = 0; f<20; f++){
+                    color = gfx_pick_heat_color(0.05*f,
+                                                         im->gdes[i].col2,
+                                                         im->gdes[i].col);
+                    cairo_set_source_rgba(im->cr, color.red, color.green, color.blue, color.alpha);
+                    double backX;
+                    double backY;
+                    double foreX;
+                    double foreY; 
+                    
+                    backX = f + X0;
+                    backY = Y0 - boxV;
+                    foreX = f + X0;
+                    foreY = Y0;
+                    gfx_line_fit(im, &backX, &backY);
+                    gfx_line_fit(im, &foreX, &foreY);
+                    cairo_move_to(im->cr, backX, backY);
+                    cairo_line_to(im->cr, foreX, foreY);
+                    cairo_set_line_cap(im->cr, CAIRO_LINE_CAP_BUTT);
+                    cairo_stroke(im->cr);
+                } 
+            }else{
+                gfx_new_area(im,
+                         X0, Y0 - boxV,
+                         X0, Y0, X0 + boxH, Y0, im->graph_col[GRC_BACK]);
+                gfx_add_point(im, X0 + boxH, Y0 - boxV);
+                gfx_close_path(im);
+                gfx_new_area(im, X0, Y0 - boxV, X0,
+                         Y0, X0 + boxH, Y0, im->gdes[i].col);
+                gfx_add_point(im, X0 + boxH, Y0 - boxV);
+                gfx_close_path(im);
+                cairo_save(im->cr);
+                cairo_new_path(im->cr);
+                cairo_set_line_width(im->cr, 1.0);
+                X1 = X0 + boxH;
+                Y1 = Y0 - boxV;
+                gfx_line_fit(im, &X0, &Y0);
+                gfx_line_fit(im, &X1, &Y1);
+                cairo_move_to(im->cr, X0, Y0);
+                cairo_line_to(im->cr, X1, Y0);
+                cairo_line_to(im->cr, X1, Y1);
+                cairo_line_to(im->cr, X0, Y1);
+                cairo_close_path(im->cr);
+                cairo_set_source_rgba(im->cr,
+                              im->graph_col[GRC_FRAME].red,
+                              im->graph_col[GRC_FRAME].green,
+                              im->graph_col[GRC_FRAME].blue,
+                              im->graph_col[GRC_FRAME].alpha);
+            }
         }
                 if (im->gdes[i].dash) {
                     /* make box borders in legend dashed if the graph is dashed */
@@ -3491,6 +3520,9 @@ int graph_paint(
         case GF_AREA:
             case GF_GRAD:
         case GF_HEAT:
+            if(im->gdes[i].gf == GF_HEAT && im->logarithmic){
+                rrd_set_error("HEAT and logarithmic Y-axis are incompatible");
+            }
            /* fix data points at infinity and -infinity */
             for (ii = 0; ii < im->xsize; ii++) {
                 if (isinf(im->gdes[i].p_data[ii])) {
@@ -3589,49 +3621,40 @@ int graph_paint(
                     cairo_stroke(im->cr);
                     cairo_restore(im->cr);
                 }else if(im->gdes[i].gf == GF_HEAT){
+                    //im->grad_legend = 1;
                     gfx_color_t color;
+                    //cairo_save(im->cr);
+                    //cairo_new_path(im->cr);
+                    cairo_set_line_width(im->cr, 2.0);
     
                     for (ii = 0; ii < im->xsize; ii++) {
-                        int    draw_on = 0; 
                         double backX;
                         double backY;
                         double foreX;
                         double foreY;
 
-                        if (isnan(im->gdes[i].p_data[ii])) {
-                            draw_on = 0;
-                            continue;
-                        }
-                        if (draw_on == 0) {
-                            /* PICKING HEAT COLOR*/
-                            color = 
-                                gfx_pick_heat_color(im->gdes[i].p_data[ii], 
-                                                    im->gdes[i].col2, 
-                                                    im->gdes[i].col);
-                            if(im->h_gap){  
-                                backX = ii + im->xorigin;
-                                backY = ytr(im, cum_height);
-                                foreX = ii + im->xorigin;
-                                foreY = ytr(im, cum_height + im->gdes[i].heat_height);
-                            }else{
-                                backX = ii + im->xorigin;
-                                backY = ytr(im, cum_height 
-                                        + im->gdes[i].heat_height*im->heat_gap*0.005);
-                                foreX = ii + im->xorigin;
-                                foreY = ytr(im, cum_height + im->gdes[i].heat_height
-                                            - im->gdes[i].heat_height*im->heat_gap*0.005);
-                            }
+                        /* PICKING HEAT COLOR*/
+                        color = 
+                            gfx_pick_heat_color(im->gdes[i].p_data[ii], 
+                                                im->gdes[i].col2, 
+                                                im->gdes[i].col);
 
-                            cairo_set_source_rgba(im->cr, color.red, color.green, color.blue, color.alpha);
-                            gfx_line_fit(im, &backX, &backY);
-                            cairo_move_to(im->cr, backX, backY);
-                            gfx_line_fit(im, &foreX, &foreY);
-                            cairo_line_to(im->cr, foreX, foreY);
-                            draw_on = 1;
-                        }
-                        cairo_set_line_cap(im->cr, CAIRO_LINE_CAP_ROUND);
-                        cairo_set_line_join(im->cr, CAIRO_LINE_JOIN_ROUND);
+                        backX = ii + im->xorigin;
+                        backY = ytr(im, cum_height 
+                                + im->gdes[i].heat_height*im->heat_gap*0.005);
+                        foreX = ii + im->xorigin;
+                        foreY = ytr(im, cum_height + im->gdes[i].heat_height
+                                    - im->gdes[i].heat_height*im->heat_gap*0.005);
+
+                        cairo_set_source_rgba(im->cr, color.red, color.green, color.blue, color.alpha);
+                        gfx_line_fit(im, &backX, &backY);
+                        cairo_move_to(im->cr, backX, backY);
+                        gfx_line_fit(im, &foreX, &foreY);
+                        cairo_line_to(im->cr, foreX, foreY);
+                    
+                        cairo_set_line_cap(im->cr, CAIRO_LINE_CAP_BUTT);
                         cairo_stroke(im->cr);
+                        //cairo_restore(im->cr);
                     }
                 }else { /* end of else if GF_HEAT */ 
                     double lastx=0;
@@ -4257,6 +4280,9 @@ void rrd_graph_init(
     im->yOriginTitle = 0;
     im->ysize = 100;
     im->zoom = 1;
+    im->heat_gap = 0.0;
+    im->heat_base = 0.0;
+    // im->grad_legend = 0;
 
     im->surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 10, 10);
     im->cr = cairo_create(im->surface);
@@ -4467,7 +4493,7 @@ void rrd_graph_options(
             break;
         case 'H':
             im->heat_gap = atof(optarg);
-            im->h_gap = 0;
+            // im->h_gap = 0;
             break;
         case 'C':
             im->heat_base = atof(optarg);
