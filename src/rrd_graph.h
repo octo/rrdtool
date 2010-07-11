@@ -207,7 +207,7 @@ typedef struct image_desc_t {
 
     char      graphfile[MAXPATH];   /* filename for graphic */
     int       heat;    /* boolean */
-    // int       grad_legend; /* bool. Indicates if the legend color box will be with gradient color. */
+    int       nan_fill;    /* boolean. If true, generate nan if fetch does not succeed? */
     double    tot_heat_height; /*total height of the heat-map*/
     long      xsize, ysize; /* graph area size in pixels */
     struct gfx_color_t graph_col[__GRC_END__];  /* real colors for the graph */
@@ -234,7 +234,6 @@ typedef struct image_desc_t {
     unsigned long step; /* any preference for the default step ? */
     float heat_gap; /* gap between the separate heat maps */
     float heat_base; /* user defineable base for the first bar */
-    int h_gap; /* gap between the separate heat maps */
     rrd_value_t minval, maxval; /* extreme values in the data */
     int       rigid;    /* do not expand range even with 
                            values outside */
@@ -330,7 +329,7 @@ void      reduce_data(
     rrd_value_t **);
 int       data_fetch(
     image_desc_t *);
-int       fake_data_fetch(
+int       generate_nan(
     image_desc_t *, int);
 long      find_var(
     image_desc_t *,

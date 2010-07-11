@@ -855,27 +855,34 @@ int data_fetch(
             }else{
                 rrd_daemon = im->daemon_addr;
             }
-
             /* "daemon" may be NULL. ENV_RRDCACHED_ADDRESS is evaluated in that
              * case. If "daemon" holds the same value as in the previous
              * iteration, no actual new connection is established - the
              * existing connection is re-used. */
-            rrdc_connect (rrd_daemon);
+            // rrdc_connect (rrd_daemon);
             /* If connecting was successfull, use the daemon to query the data.
              * If there is no connection, for example because no daemon address
              * was specified, (try to) use the local file directly. */
-            if (rrdc_is_connected (rrd_daemon))
+            if (rrd_daemon != NULL)
             {
-                status = rrdc_fetch (im->gdes[i].rrd,
-                        cf_to_string (im->gdes[i].cf),
-                        &im->gdes[i].start,
-                        &im->gdes[i].end,
-                        &ft_step,
-                        &im->gdes[i].ds_cnt,
-                        &im->gdes[i].ds_namv,
-                        &im->gdes[i].data);
-                if (status != 0)
-                    fake_data_fetch(im, i);
+                status = rrdc_connect (rrd_daemon);
+                if (!status)
+                {
+                    status = rrdc_fetch (im->gdes[i].rrd,
+                            cf_to_string (im->gdes[i].cf),
+                            &im->gdes[i].start,
+                            &im->gdes[i].end,
+                            &ft_step,
+                            &im->gdes[i].ds_cnt,
+                            &im->gdes[i].ds_namv,
+                            &im->gdes[i].data);
+                    if (status != 0){
+                        generate_nan(im, i);
+                    }
+                }else
+                {
+                    generate_nan(im, i);
+                }
             }
             else
             {
@@ -887,7 +894,7 @@ int data_fetch(
                                 &im->gdes[i].ds_cnt,
                                 &im->gdes[i].ds_namv,
                                 &im->gdes[i].data)) == -1) {
-                fake_data_fetch(im, i);
+                generate_nan(im, i);
                 }
             }   
             im->gdes[i].data_first = 1;
@@ -920,32 +927,35 @@ int data_fetch(
     return 0;
 }
 
-int fake_data_fetch(
+int generate_nan(
     image_desc_t *im, int i)
 {
-    printf("############### GENERATING FAKE DATA ################\n");
-    im->gdes[i].ds_cnt = 1;
+    if(im->nan_fill){
+        printf("############### GENERATING NaN ################\n");
+        im->gdes[i].ds_cnt = 1;
 
-    im->gdes[i].ds_namv = calloc(im->gdes[i].ds_cnt, sizeof(char*));
-    for (int l = 0; l < (int) im->gdes[i].ds_cnt; l++) {
-        im->gdes[i].ds_namv[l] = (char*)malloc(sizeof(char) * DS_NAM_SIZE);
-        strncpy(im->gdes[i].ds_namv[l], im->gdes[i].ds_nam, DS_NAM_SIZE - 1);
-    }
+        im->gdes[i].ds_namv = calloc(im->gdes[i].ds_cnt, sizeof(char*));
+        for (int l = 0; l < (int) im->gdes[i].ds_cnt; l++) {
+            im->gdes[i].ds_namv[l] = (char*)malloc(sizeof(char) * DS_NAM_SIZE);
+            strncpy(im->gdes[i].ds_namv[l], im->gdes[i].ds_nam, DS_NAM_SIZE - 1);
+        }
 
-    unsigned long int data_size = im->gdes[i].ds_cnt * (im->gdes[i].end
-                - im->gdes[i].start)/im->gdes[i].step;
-    rrd_value_t *data;
-    data = (rrd_value_t *) calloc (data_size, sizeof (rrd_value_t));
+        unsigned long int data_size = im->gdes[i].ds_cnt * (im->gdes[i].end
+                    - im->gdes[i].start)/im->gdes[i].step;
+        rrd_value_t *data;
+        data = (rrd_value_t *) calloc (data_size, sizeof (rrd_value_t));
 
-    if(data == NULL)
-        printf("Could not allocate memory for data");
+        if(data == NULL)
+            rrd_set_error("Failed allocating memory for NaN data.");
 
-    im->gdes[i].data = data;
-    unsigned long int k = 0;
-    for (k = 0; k < data_size; k ++)
-    {
-        *data = DNAN;
-        *data += k;
+        im->gdes[i].data = data;
+        unsigned long int k = 0;
+        for (k = 0; k < data_size; k ++)
+        {
+            data[k] = DNAN;
+        }
+    }else{
+        return -1;
     }
     return 0;
 }
@@ -1693,7 +1703,7 @@ int print_calc(
             break;
         case GF_LINE:
         case GF_AREA:
-        case GF_HEAT: // TODO This shouldn't be here!!! Figure out how to do it!
+        case GF_HEAT: 
         case GF_GRAD:
         case GF_TICK:
             graphelement = 1;
@@ -3623,7 +3633,7 @@ int graph_paint(
                 }else if(im->gdes[i].gf == GF_HEAT){
                     //im->grad_legend = 1;
                     gfx_color_t color;
-                    //cairo_save(im->cr);
+                    cairo_save(im->cr);
                     //cairo_new_path(im->cr);
                     cairo_set_line_width(im->cr, 2.0);
     
@@ -3654,8 +3664,8 @@ int graph_paint(
                     
                         cairo_set_line_cap(im->cr, CAIRO_LINE_CAP_BUTT);
                         cairo_stroke(im->cr);
-                        //cairo_restore(im->cr);
                     }
+                    cairo_restore(im->cr);
                 }else { /* end of else if GF_HEAT */ 
                     double lastx=0;
                     double lasty=0;
@@ -4222,6 +4232,7 @@ void rrd_graph_init(
     im->draw_y_grid = 1;
     im->draw_3d_border = 2;
     im->dynamic_labels = 0;
+    im->nan_fill = 0;
     im->extra_flags = 0;
     im->font_options = cairo_font_options_create();
     im->forceleftspace = 0;
@@ -4282,7 +4293,6 @@ void rrd_graph_init(
     im->zoom = 1;
     im->heat_gap = 0.0;
     im->heat_base = 0.0;
-    // im->grad_legend = 0;
 
     im->surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 10, 10);
     im->cr = cairo_create(im->surface);
@@ -4321,6 +4331,7 @@ void rrd_graph_init(
 
 }
 
+int conn_to;
 
 void rrd_graph_options(
     int argc,
@@ -4369,6 +4380,7 @@ void rrd_graph_options(
         { "no-gridfit",         no_argument,       0, 'N'},
         { "font",               required_argument, 0, 'n'},
         { "logarithmic",        no_argument,       0, 'o'},
+        { "connect-timeout",    required_argument, 0, 'O'},
         { "pango-markup",       no_argument,       0, 'P'},
         { "font-render-mode",   required_argument, 0, 'R'},
         { "rigid",              no_argument,       0, 'r'},
@@ -4396,6 +4408,7 @@ void rrd_graph_options(
         { "border",             required_argument, 0, 1007},
         { "grid-dash",          required_argument, 0, 1008},
         { "dynamic-labels",     no_argument,       0, 1009},
+        { "nan-fill-unavailable",no_argument,      0, 1010},
         {  0, 0, 0, 0}
 };
 /* *INDENT-ON* */
@@ -4410,7 +4423,7 @@ void rrd_graph_options(
         int       col_start, col_end;
 
         opt = getopt_long(argc, argv,
-                          "Aa:B:b:c:C:Dd:Ee:Ff:G:gh:IiJjL:l:Mm:Nn:oPR:rS:H:s:T:t:u:v:W:w:X:x:Yy:z",
+                          "Aa:B:b:c:C:Dd:Ee:Ff:G:gh:IiJjL:l:Mm:Nn:oPR:i:O:rS:H:s:T:t:u:v:W:w:X:x:Yy:z",
                           long_options, &option_index);
         if (opt == EOF)
             break;
@@ -4493,7 +4506,6 @@ void rrd_graph_options(
             break;
         case 'H':
             im->heat_gap = atof(optarg);
-            // im->h_gap = 0;
             break;
         case 'C':
             im->heat_base = atof(optarg);
@@ -4587,7 +4599,10 @@ void rrd_graph_options(
             break;   
         case 1009: /* enable dynamic labels */
             im->dynamic_labels = 1;
-            break;         
+            break;        
+        case 1010: /* Enable generation of nan data series when fetch impossible */
+            im->nan_fill = 1;
+            break; 
         case 1002: /* right y axis */
 
             if(sscanf(optarg,
@@ -4676,6 +4691,9 @@ void rrd_graph_options(
             break;
         case 'o':
             im->logarithmic = 1;
+            break;
+        case 'O':
+            conn_to = atoi(optarg);
             break;
         case 'c':
             if (sscanf(optarg,
