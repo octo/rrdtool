@@ -79,6 +79,9 @@ int rrdc_fetch (const char *filename,
     char ***ret_ds_names,
     rrd_value_t **ret_data);
 
+int get_conn_to(int c_to, 
+    int c_timeout);
+
 #else
 #   define rrdc_flush_if_daemon(a,b) 0
 #   define rrdc_connect(a) 0

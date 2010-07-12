@@ -813,6 +813,8 @@ int data_fetch(
     int       i, ii;
     int       skip;
 
+    get_conn_to(im->conn_to, im->c_timeout);
+
     /* pull the data from the rrd files ... */
     for (i = 0; i < (int) im->gdes_c; i++) {
         /* only GF_DEF elements fetch data */
@@ -1331,7 +1333,7 @@ int data_proc(
                     /* GF_TICK: the data values are not
                      ** relevant for min and max
                      */
-                    if (finite(paintval) && im->gdes[ii].gf != GF_TICK) {
+                    if (finite(paintval) && im->gdes[ii].gf != GF_TICK && im->gdes[ii].gf != GF_HEAT) {
                         if ((isnan(minval) || paintval < minval) &&
                             !(im->logarithmic && paintval <= 0.0))
                             minval = paintval;
@@ -1355,7 +1357,8 @@ int data_proc(
 
     if(im->heat)
     {
-        im->maxval = im->tot_heat_height;
+        im->maxval = maxval + im->tot_heat_height;
+        im->minval = minval + im->heat_base;
     }
 
     /* if min or max have not been asigned a value this is because
@@ -3532,6 +3535,7 @@ int graph_paint(
         case GF_HEAT:
             if(im->gdes[i].gf == GF_HEAT && im->logarithmic){
                 rrd_set_error("HEAT and logarithmic Y-axis are incompatible");
+                return -1;
             }
            /* fix data points at infinity and -infinity */
             for (ii = 0; ii < im->xsize; ii++) {
@@ -4293,6 +4297,8 @@ void rrd_graph_init(
     im->zoom = 1;
     im->heat_gap = 0.0;
     im->heat_base = 0.0;
+    im->conn_to = 0;
+    im->c_timeout = 0;
 
     im->surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 10, 10);
     im->cr = cairo_create(im->surface);
@@ -4330,8 +4336,6 @@ void rrd_graph_init(
 
 
 }
-
-int conn_to;
 
 void rrd_graph_options(
     int argc,
@@ -4693,7 +4697,8 @@ void rrd_graph_options(
             im->logarithmic = 1;
             break;
         case 'O':
-            conn_to = atoi(optarg);
+            im->c_timeout = atoi(optarg);
+            im->conn_to = 1;
             break;
         case 'c':
             if (sscanf(optarg,

@@ -208,6 +208,8 @@ typedef struct image_desc_t {
     char      graphfile[MAXPATH];   /* filename for graphic */
     int       heat;    /* boolean */
     int       nan_fill;    /* boolean. If true, generate nan if fetch does not succeed? */
+    int       conn_to;    /* boolean. If true, connect to rrdcached using user-specified timeout */
+    int       c_timeout;  /*Connect timeout*/
     double    tot_heat_height; /*total height of the heat-map*/
     long      xsize, ysize; /* graph area size in pixels */
     struct gfx_color_t graph_col[__GRC_END__];  /* real colors for the graph */

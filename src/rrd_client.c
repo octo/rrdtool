@@ -28,6 +28,7 @@
 #include "rrd.h"
 #include "rrd_tool.h"
 #include "rrd_client.h"
+// #include "rrd_graph.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -59,6 +60,8 @@ static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 static int sd = -1;
 static FILE *sh = NULL;
 static char *sd_path = NULL; /* cache the path for sd */
+static int conn_to; /*bool. Connect wit user specified timeout?*/
+static int conn_timeout; /* User specified timeout */
 
 /* get_path: Return a path name appropriate to be sent to the daemon.
  *
@@ -541,7 +544,10 @@ static int rrdc_connect_network (const char *addr_orig) /* {{{ */
   /* Connect with timeout. (Inspired by <http://www.developerweb.net/forum/showthread.php?p=13486>) */
   long arg; 
   fd_set myset; 
-  struct timeval tv; 
+  struct timeval tv;
+  
+  printf("The flag %d \n", conn_to);
+  printf("The timeout %d \n", conn_timeout);
 
   assert (addr_orig != NULL);
   assert (sd == -1);
@@ -606,74 +612,81 @@ static int rrdc_connect_network (const char *addr_orig) /* {{{ */
     return (-1);
   }
 
-  for (ai_ptr = ai_res; ai_ptr != NULL; ai_ptr = ai_ptr->ai_next)
-  {
-    // Create sockets
-    sd = socket (ai_ptr->ai_family, ai_ptr->ai_socktype, ai_ptr->ai_protocol);
-    if (sd < 0)
+  if(conn_to)
     {
-      status = errno;
-      sd = -1;
-      continue;
-    }
-    // Set non-blocking
-    arg = fcntl(sd, F_GETFL, NULL); 
-    arg |= O_NONBLOCK; 
-    fcntl(sd, F_SETFL, arg);
-
-    // Trying to connect with timeout
-    status = connect (sd, ai_ptr->ai_addr, ai_ptr->ai_addrlen);
-    tv.tv_sec = 3; 
-    tv.tv_usec = 0; 
-    FD_ZERO(&myset); 
-    FD_SET(sd, &myset);
-    int cd; // connect descriptor 
-    cd = select(sd+1, NULL, &myset, NULL, &tv);
-    if(cd > 0)
-        status = 0;
-    else if(status <= 0)
-        status = -1;
-    
-    /*
-    if (status < 0) { 
-      if (errno == EINPROGRESS) { 
-        tv.tv_sec = 3; 
-        tv.tv_usec = 0; 
-        FD_ZERO(&myset); 
-        FD_SET(sd, &myset); 
-        if (select(sd+1, NULL, &myset, NULL, &tv) > 0) { 
-          lon = sizeof(int); 
-          getsockopt(sd, SOL_SOCKET, SO_ERROR, (void*)(&valopt), &lon); 
-          if (valopt) {
-            fprintf(stderr, "Error in connection\n"); 
-          } 
-        }else{
-          fprintf(stderr, "Timeout or error\n"); 
-        } 
-      //status = 0;
-      }else{ 
-        fprintf(stderr, "Error connecting\n"); 
-      } 
-      // TODO Will this cause problems??? Does this really ensure that status will become 0 only if the server actually responded?
-    } */
-
-    // Set to blocking mode again... 
-    arg = fcntl(sd, F_GETFL, NULL); 
-    arg &= (~O_NONBLOCK); 
-    fcntl(sd, F_SETFL, arg); 
-
-    sh = fdopen (sd, "r+");
-    if (sh == NULL)
+    for (ai_ptr = ai_res; ai_ptr != NULL; ai_ptr = ai_ptr->ai_next)
     {
-      status = errno;
-      close_connection ();
-      continue;
-    }
-    
-    // assert (status == 0);
-    break;
-  } /* for (ai_ptr) */
+      // Create sockets
+      sd = socket (ai_ptr->ai_family, ai_ptr->ai_socktype, ai_ptr->ai_protocol);
+      if (sd < 0)
+      {
+        status = errno;
+        sd = -1;
+        continue;
+      }
+      // Set non-blocking
+      arg = fcntl(sd, F_GETFL, NULL); 
+      arg |= O_NONBLOCK; 
+      fcntl(sd, F_SETFL, arg);
 
+      // Trying to connect with timeout
+      status = connect (sd, ai_ptr->ai_addr, ai_ptr->ai_addrlen);
+      tv.tv_sec = conn_timeout; 
+      tv.tv_usec = 0; 
+      FD_ZERO(&myset); 
+      FD_SET(sd, &myset);
+      int cd; // connect descriptor 
+      cd = select(sd+1, NULL, &myset, NULL, &tv);
+      if(cd > 0)
+          status = 0;
+      else if(status <= 0)
+          status = -1;
+      
+      // Set to blocking mode again... 
+      arg = fcntl(sd, F_GETFL, NULL); 
+      arg &= (~O_NONBLOCK); 
+      fcntl(sd, F_SETFL, arg); 
+
+      sh = fdopen (sd, "r+");
+      if (sh == NULL)
+      {
+        status = errno;
+        close_connection ();
+        continue;
+      }
+      
+      break;
+    } /* for (ai_ptr) */
+  }else{
+    for (ai_ptr = ai_res; ai_ptr != NULL; ai_ptr = ai_ptr->ai_next)
+    {
+      sd = socket (ai_ptr->ai_family, ai_ptr->ai_socktype, ai_ptr->ai_protocol);
+      if (sd < 0)
+      {
+        status = errno;
+        sd = -1;
+        continue;
+      }
+
+      status = connect (sd, ai_ptr->ai_addr, ai_ptr->ai_addrlen);
+      if (status != 0)
+      {
+        status = errno;
+        close_connection();
+        continue;
+      }
+
+      sh = fdopen (sd, "r+");
+      if (sh == NULL)
+      {
+        status = errno;
+        close_connection ();
+        continue;
+      }
+      assert (status == 0);
+      break;
+    } /* for (ai_ptr) */
+  }
   return (status);
 } /* }}} int rrdc_connect_network */
 
@@ -707,10 +720,14 @@ int rrdc_connect (const char *addr) /* {{{ */
     status = rrdc_connect_unix (addr);
   else
     status = rrdc_connect_network(addr);
+  printf("In rrdc_connect status is %d and sd is %d\n", status, sd);
   if (status == 0 && sd >= 0)
+  { 
     sd_path = strdup(addr);
+  }
   else
-  {
+  { 
+    printf("I should be here\n");
     char *err = rrd_test_error () ? rrd_get_error () : "Internal error";
     /* err points the string that gets written to by rrd_set_error(), thus we
      * cannot pass it to that function */
@@ -1065,6 +1082,14 @@ int rrdc_fetch (const char *filename, /* {{{ */
 #undef READ_NUMERIC_FIELD
 #undef BAIL_OUT
 } /* }}} int rrdc_flush */
+
+int get_conn_to(int c_to, 
+    int c_timeout)
+{
+  conn_to = c_to;
+  conn_timeout = c_timeout;
+  return 0;
+}
 
 /* convenience function; if there is a daemon specified, or if we can
  * detect one from the environment, then flush the file.  Otherwise, no-op
