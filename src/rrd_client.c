@@ -546,9 +546,6 @@ static int rrdc_connect_network (const char *addr_orig) /* {{{ */
   fd_set myset; 
   struct timeval tv;
   
-  printf("The flag %d \n", conn_to);
-  printf("The timeout %d \n", conn_timeout);
-
   assert (addr_orig != NULL);
   assert (sd == -1);
     
@@ -720,14 +717,12 @@ int rrdc_connect (const char *addr) /* {{{ */
     status = rrdc_connect_unix (addr);
   else
     status = rrdc_connect_network(addr);
-  printf("In rrdc_connect status is %d and sd is %d\n", status, sd);
   if (status == 0 && sd >= 0)
   { 
     sd_path = strdup(addr);
   }
   else
   { 
-    printf("I should be here\n");
     char *err = rrd_test_error () ? rrd_get_error () : "Internal error";
     /* err points the string that gets written to by rrd_set_error(), thus we
      * cannot pass it to that function */
