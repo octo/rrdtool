@@ -295,7 +295,7 @@ stack of lines or areas.
 By default the y-coordinate of the base of the first heat bar is 0 (i.e. it 
 overlaps with the x-axis). heat-base allows the user to specify the 
 y-coordinate of the heat base. As a result the whole heat-map is shifted up 
-as many data units as specified by the user.
+as many units on the y-axis as specified by the user.
 
 [B<--heat-gap> I<value>]
 

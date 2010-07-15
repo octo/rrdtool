@@ -345,9 +345,9 @@ with B<IF> and B<UN> to do so.
 Draws heat-map onto the graph. I<height> can be a floating point number 
 and specifies the height of each heat-bar. I<color1> and I<color2> are 
 mandatory arguments and specify the range in which color gradient changes. 
-I<color1> corresponds to minimum value and I<color2> - to the maximum value 
-in the data set. The I<legend> argument is optional and if specified, will 
-be printed in the legend section. 
+I<color1> corresponds to the minimum value and I<color2> - to the maximum 
+value in the data set. The I<legend> argument is optional and if specified, 
+will be printed in the legend section. 
 
 =head1 NOTES on legend arguments
 
