@@ -288,6 +288,20 @@ Place the legend items in the given vertical order. The default is topdown.
 Using bottomup the legend items appear in the same vertical order as a
 stack of lines or areas.
 
+=head2 HEAT maps
+
+[B<--heat-base> I<value>]
+
+By default the y-coordinate of the base of the first heat bar is 0 (i.e. it 
+overlaps with the x-axis). heat-base allows the user to specify the 
+y-coordinate of the heat base. As a result the whole heat-map is shifted up 
+as many data units as specified by the user.
+
+[B<--heat-gap> I<value>]
+
+The heat-gap option enables spacing between the separate bars of a heat-map. 
+The specified value is the percentage of the heat-bar to be drawn as a gap.
+
 =head2 Miscellaneous
 
 [B<-z>|B<--lazy>]
@@ -354,7 +368,10 @@ color.
 
 Pick the shape of the color marker next to the label according to the element drawn on the graph.
 
-[B<-m>|B<--zoom> I<factor>]
+[B<-m>|B<--t-gap option enables spacing between the separate bars of a heat-map.
+303 The specified value is the percentage of the heat-bar to be drawn as a gap.
+304 
+zoom> I<factor>]
 
 Zoom the graphics by the given amount. The factor must be E<gt> 0
 
@@ -476,6 +493,16 @@ measurement, 1 kb/s is 1000 b/s.
 
 Adds the given string as a watermark, horizontally centered, at the bottom 
 of the graph.
+
+[B<--connect-timeout> I<value>]
+
+If daemon specified, connect-timeout option allows the user to configure 
+connect timeout in seconds.
+
+[B<--nan-fill-unavailable>]
+
+If specified, rrdgraph will generate NaN data series in case standard data 
+fetch fails.
 
 =head2 Data and variables
 

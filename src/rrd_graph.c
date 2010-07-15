@@ -820,7 +820,13 @@ int data_fetch(
         /* only GF_DEF elements fetch data */
         if (im->gdes[i].gf != GF_DEF)
             continue;
-
+       /* 
+        printf("******************New DEF.************");
+        printf("variable %s\n", im->gdes[i].ds_nam);
+        printf("rrd file %s\n", im->gdes[i].rrd);
+        printf("CF %d\n", im->gdes[i].cf);
+        printf("Start %ld  Stop %ld  Step %ld \n", im->gdes[i].start, im->gdes[i].end, im->gdes[i].step);
+        printf("DS count %d \n", im->gdes[i].ds_cnt );*/
         skip = 0;
         /* do we have it already ? */
         for (ii = 0; ii < i; ii++) {
@@ -935,6 +941,7 @@ int generate_nan(
     if(im->nan_fill){
         printf("############### GENERATING NaN ################\n");
         im->gdes[i].ds_cnt = 1;
+//        printf("Number of DS %d\n", im->gdes[i].ds_cnt);
 
         im->gdes[i].ds_namv = calloc(im->gdes[i].ds_cnt, sizeof(char*));
         for (int l = 0; l < (int) im->gdes[i].ds_cnt; l++) {
@@ -956,6 +963,7 @@ int generate_nan(
         {
             data[k] = DNAN;
         }
+    printf("~~~~~~~~~~~~~~~~~ Done GENERATING NaN ~~~~~~~~~~~~~~~~~~~~\n");
     }else{
         return -1;
     }
@@ -1291,9 +1299,6 @@ int data_proc(
             case GF_GRAD:
             case GF_TICK:
             case GF_HEAT:
-                if(im->gdes[ii].gf == GF_HEAT){
-                    im->heat = 1;
-                }        
                 if (!im->gdes[ii].stack)
                     paintval = 0.0;
                 value = im->gdes[ii].yrule;
@@ -1354,13 +1359,7 @@ int data_proc(
             }
         }
     }
-
-    if(im->heat)
-    {
-        im->maxval = maxval + im->tot_heat_height;
-        im->minval = minval + im->heat_base;
-    }
-
+    
     /* if min or max have not been asigned a value this is because
        there was no data in the graph ... this is not good ...
        lets set these to dummy values then ... */
@@ -1400,7 +1399,7 @@ int data_proc(
         if (im->logarithmic)
             im->maxval = maxval * 2.0;
         else
-            im->maxval = maxval;
+            im->maxval = maxval + im->tot_heat_height;
     }
 
     /* make sure min is smaller than max */

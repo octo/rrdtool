@@ -32,6 +32,8 @@ B<GPRINT>B<:>I<vname>B<:>I<CF>B<:>I<format> (deprecated)
 
 B<STACK>B<:>I<vname>B<#>I<color>[B<:>I<legend>] (deprecated)
 
+B<HEAT>B<:>I<vname>B<#>I<color1>B<#>I<color2>B<:>I<height>[B<:>I<legend>] 
+
 =head1 DESCRIPTION
 
 These instructions allow you to generate your image or report.
@@ -337,6 +339,15 @@ not know where to end.
 If you want to make sure you will be displaying a certain variable,
 make sure never to stack upon the unknown value.  Use a CDEF instruction
 with B<IF> and B<UN> to do so.
+
+=head3 B<HEAT>B<:>I<vname>B<#>I<color1>B<#>I<color2>B<:>I<height>[B<:>I<legend>]
+
+Draws heat-map onto the graph. I<height> can be a floating point number 
+and specifies the height of each heat-bar. I<color1> and I<color2> are 
+mandatory arguments and specify the range in which color gradient changes. 
+I<color1> corresponds to minimum value and I<color2> - to the maximum value 
+in the data set. The I<legend> argument is optional and if specified, will 
+be printed in the legend section. 
 
 =head1 NOTES on legend arguments
 
