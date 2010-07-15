@@ -342,12 +342,17 @@ with B<IF> and B<UN> to do so.
 
 =head3 B<HEAT>B<:>I<vname>B<#>I<color1>B<#>I<color2>B<:>I<height>[B<:>I<legend>]
 
-Draws heat-map onto the graph. I<height> can be a floating point number 
-and specifies the height of each heat-bar. I<color1> and I<color2> are 
+Draws a B<heat-map> onto the graph. I<height> specifies the height of each 
+heat-bar and can be a floating point number. I<color1> and I<color2> are 
 mandatory arguments and specify the range in which color gradient changes. 
 I<color1> corresponds to the minimum value and I<color2> - to the maximum 
-value in the data set. The I<legend> argument is optional and if specified, 
-will be printed in the legend section. 
+value in the data set. Variable values <= 0 are mapped to color1, values 
+>= 1.0 are mapped to color2, and values in between use a linear interpolation 
+between the two colors. The interpolation is intended to work well to display 
+gradients from light blue or green to red (#CCFFFF#FF0033 or #CCFFCC#FF6600) 
+or light grey to dark grey.
+The I<legend> argument is optional and if specified, will be printed in the 
+legend section. 
 
 =head1 NOTES on legend arguments
 

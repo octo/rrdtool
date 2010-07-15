@@ -293,14 +293,18 @@ stack of lines or areas.
 [B<--heat-base> I<value>]
 
 By default the y-coordinate of the base of the first heat bar is 0 (i.e. it 
-overlaps with the x-axis). heat-base allows the user to specify the 
+overlaps with the x-axis). B<heat-base> allows the user to specify the 
 y-coordinate of the heat base. As a result the whole heat-map is shifted up 
-as many units on the y-axis as specified by the user.
+(or down for negative values) by as many units on the y-axis as specified 
+by the user.
 
 [B<--heat-gap> I<value>]
 
-The heat-gap option enables spacing between the separate bars of a heat-map. 
-The specified value is the percentage of the heat-bar to be drawn as a gap.
+The B<heat-gap> option enables spacing between the separate bars of a heat-map. 
+The specified value is the percentage from the heat-bar to be drawn as a gap.
+For example, if the height of the heat bar is 20 units and the gap is 20%, 
+then only 16 units will be filled and 4 units will be blank as gap. The gap 
+is evenly distributed above and below the filled portion of the bar.
 
 =head2 Miscellaneous
 
@@ -496,8 +500,9 @@ of the graph.
 
 [B<--connect-timeout> I<value>]
 
-If daemon specified, connect-timeout option allows the user to configure 
-connect timeout in seconds.
+If a daemon is specified and accessed via the network (TCP), then the 
+B<connect-timeout> option allows the user to configure a connection timeout 
+specified in seconds.
 
 [B<--nan-fill-unavailable>]
 
