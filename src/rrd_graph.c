@@ -1390,16 +1390,24 @@ int data_proc(
         ) {
         if (im->logarithmic)
             im->minval = minval / 2.0;
-        else
-            im->minval = minval;
+        else{
+            if(im->heat_base < 0)
+                im->minval = minval - im->tot_heat_height;
+            else
+                im->minval = minval;
+        }
     }
     if (isnan(im->maxval)
         || (!im->rigid && im->maxval < maxval)
         ) {
         if (im->logarithmic)
             im->maxval = maxval * 2.0;
-        else
-            im->maxval = maxval + im->tot_heat_height;
+        else{
+            if(im->heat_base > 0)
+                im->maxval = maxval + im->tot_heat_height;
+            else
+                im->maxval = maxval;
+        }
     }
 
     /* make sure min is smaller than max */
