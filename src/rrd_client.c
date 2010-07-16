@@ -60,7 +60,6 @@ static pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 static int sd = -1;
 static FILE *sh = NULL;
 static char *sd_path = NULL; /* cache the path for sd */
-static int conn_to; /*bool. Connect wit user specified timeout?*/
 static int conn_timeout; /* User specified timeout */
 
 /* get_path: Return a path name appropriate to be sent to the daemon.
@@ -543,8 +542,11 @@ static int rrdc_connect_network (const char *addr_orig) /* {{{ */
   char *port;
   /* Connect with timeout. (Inspired by <http://www.developerweb.net/forum/showthread.php?p=13486>) */
   long arg; 
-  fd_set myset; 
+  fd_set myset;
+  int valopt; 
+  socklen_t lon; 
   struct timeval tv;
+  int res;
   
   assert (addr_orig != NULL);
   assert (sd == -1);
@@ -609,8 +611,8 @@ static int rrdc_connect_network (const char *addr_orig) /* {{{ */
     return (-1);
   }
 
-  if(conn_to)
-    {
+  if(conn_timeout > 0)
+  {
     for (ai_ptr = ai_res; ai_ptr != NULL; ai_ptr = ai_ptr->ai_next)
     {
       // Create sockets
@@ -621,39 +623,73 @@ static int rrdc_connect_network (const char *addr_orig) /* {{{ */
         sd = -1;
         continue;
       }
+      
       // Set non-blocking
-      arg = fcntl(sd, F_GETFL, NULL); 
+      if(((arg = fcntl(sd, F_GETFL, NULL))) < 0) {
+        rrd_set_error("Error fcntl(..., F_GETFL) (%s)\n", strerror(errno));
+        return -1; 
+      } 
       arg |= O_NONBLOCK; 
-      fcntl(sd, F_SETFL, arg);
+      if( fcntl(sd, F_SETFL, arg) < 0) { 
+        rrd_set_error("Error fcntl(..., F_SETFL) (%s)\n", strerror(errno));
+        return -1; 
+      }
 
       // Trying to connect with timeout
       status = connect (sd, ai_ptr->ai_addr, ai_ptr->ai_addrlen);
-      tv.tv_sec = conn_timeout; 
-      tv.tv_usec = 0; 
-      FD_ZERO(&myset); 
-      FD_SET(sd, &myset);
-      int cd; // connect descriptor 
-      cd = select(sd+1, NULL, &myset, NULL, &tv);
-      if(cd > 0)
-          status = 0;
-      else if(status <= 0)
-          status = -1;
-      
-      // Set to blocking mode again... 
-      arg = fcntl(sd, F_GETFL, NULL); 
-      arg &= (~O_NONBLOCK); 
-      fcntl(sd, F_SETFL, arg); 
+      if (status < 0) { 
+        if (errno == EINPROGRESS) { 
+          tv.tv_sec = conn_timeout;
+          tv.tv_usec = 0; 
+          FD_ZERO(&myset); 
+          FD_SET(sd, &myset);
+          res = select(sd+1, NULL, &myset, NULL, &tv);
+          if (res <= 0 && errno != EINTR) {
+            status = -1;
+            close_connection();
+            rrd_set_error( "Error in connecting %s\n", strerror(errno));
+            continue;
+          }     
+          else if (res > 0) {
+            // Socket selected for write 
+            lon = sizeof(int); 
+            if (getsockopt(sd, SOL_SOCKET, SO_ERROR, (void*)(&valopt), &lon) < 0) { // getsockopt returns -1 in case of error
+              status = -1;
+              close_connection();
+              rrd_set_error( "Error in getsockopt() %s\n", strerror(errno));
+              continue;
+            }else{ // getsockopt returns 0 upon successful completion 
+              status = 0;
+              // Set to blocking mode again... 
+              if( (arg = fcntl(sd, F_GETFL, NULL)) < 0) { 
+                rrd_set_error("Error fcntl(..., F_GETFL) (%s)\n", strerror(errno));
+              } 
+              arg &= (~O_NONBLOCK); 
+              if( fcntl(sd, F_SETFL, arg) < 0) { 
+                rrd_set_error("Error fcntl(..., F_SETFL) (%s)\n", strerror(errno));
+              }
 
-      sh = fdopen (sd, "r+");
-      if (sh == NULL)
-      {
-        status = errno;
-        close_connection ();
+              sh = fdopen (sd, "r+");
+              if (sh == NULL)
+              {
+                status = errno;
+                close_connection ();
+                continue;
+              }
+              
+              break;
+            }
+            // Check the value returned... 
+          } 
+      else {
+        status = -1;
+        close_connection();
+        rrd_set_error("Error connecting (%s)\n", strerror(errno));
         continue;
-      }
-      
-      break;
+      } 
+    } 
     } /* for (ai_ptr) */
+  }
   }else{
     for (ai_ptr = ai_res; ai_ptr != NULL; ai_ptr = ai_ptr->ai_next)
     {
@@ -1078,10 +1114,9 @@ int rrdc_fetch (const char *filename, /* {{{ */
 #undef BAIL_OUT
 } /* }}} int rrdc_flush */
 
-int get_conn_to(int c_to, 
+int set_conn_to( 
     int c_timeout)
 {
-  conn_to = c_to;
   conn_timeout = c_timeout;
   return 0;
 }

@@ -79,7 +79,7 @@ int rrdc_fetch (const char *filename,
     char ***ret_ds_names,
     rrd_value_t **ret_data);
 
-int get_conn_to(int c_to, 
+int set_conn_to( 
     int c_timeout);
 
 #else

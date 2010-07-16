@@ -813,7 +813,7 @@ int data_fetch(
     int       i, ii;
     int       skip;
 
-    get_conn_to(im->conn_to, im->c_timeout);
+    set_conn_to(im->c_timeout);
 
     /* pull the data from the rrd files ... */
     for (i = 0; i < (int) im->gdes_c; i++) {
@@ -4296,7 +4296,6 @@ void rrd_graph_init(
     im->zoom = 1;
     im->heat_gap = 0.0;
     im->heat_base = 0.0;
-    im->conn_to = 0;
     im->c_timeout = 0;
 
     im->surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 10, 10);
@@ -4697,7 +4696,6 @@ void rrd_graph_options(
             break;
         case 'O':
             im->c_timeout = atoi(optarg);
-            im->conn_to = 1;
             break;
         case 'c':
             if (sscanf(optarg,
