@@ -236,7 +236,7 @@ enum gf_en gf_conv(
     conv_if(AREA, GF_AREA);
     conv_if(GRAD, GF_GRAD);
     conv_if(STACK, GF_STACK);
-    conv_if(HEAT, GF_HEAT); // HEAT
+    conv_if(HEAT, GF_HEAT);
     conv_if(TICK, GF_TICK);
     conv_if(TEXTALIGN, GF_TEXTALIGN);
     conv_if(DEF, GF_DEF);
@@ -820,38 +820,33 @@ int data_fetch(
         /* only GF_DEF elements fetch data */
         if (im->gdes[i].gf != GF_DEF)
             continue;
-       /* 
-        printf("******************New DEF.************");
-        printf("variable %s\n", im->gdes[i].ds_nam);
-        printf("rrd file %s\n", im->gdes[i].rrd);
-        printf("CF %d\n", im->gdes[i].cf);
-        printf("Start %ld  Stop %ld  Step %ld \n", im->gdes[i].start, im->gdes[i].end, im->gdes[i].step);
-        printf("DS count %d \n", im->gdes[i].ds_cnt );*/
         skip = 0;
         /* do we have it already ? */
-        for (ii = 0; ii < i; ii++) {
-            if (im->gdes[ii].gf != GF_DEF)
-                continue;
-            if ((strcmp(im->gdes[i].rrd, im->gdes[ii].rrd) == 0)
-                && (im->gdes[i].cf == im->gdes[ii].cf)
-                && (im->gdes[i].cf_reduce == im->gdes[ii].cf_reduce)
-                && (im->gdes[i].start_orig == im->gdes[ii].start_orig)
-                && (im->gdes[i].end_orig == im->gdes[ii].end_orig)
-                && (im->gdes[i].step_orig == im->gdes[ii].step_orig)) {
-                /* OK, the data is already there.
-                 ** Just copy the header portion
-                 */
-                im->gdes[i].start = im->gdes[ii].start;
-                im->gdes[i].end = im->gdes[ii].end;
-                im->gdes[i].step = im->gdes[ii].step;
-                im->gdes[i].ds_cnt = im->gdes[ii].ds_cnt;
-                im->gdes[i].ds_namv = im->gdes[ii].ds_namv;
-                im->gdes[i].data = im->gdes[ii].data;
-                im->gdes[i].data_first = 0;
-                skip = 1;
+        if(!im->generate_nan){
+            for (ii = 0; ii < i; ii++) {
+                if (im->gdes[ii].gf != GF_DEF)
+                    continue;
+                if ((strcmp(im->gdes[i].rrd, im->gdes[ii].rrd) == 0)
+                    && (im->gdes[i].cf == im->gdes[ii].cf)
+                    && (im->gdes[i].cf_reduce == im->gdes[ii].cf_reduce)
+                    && (im->gdes[i].start_orig == im->gdes[ii].start_orig)
+                    && (im->gdes[i].end_orig == im->gdes[ii].end_orig)
+                    && (im->gdes[i].step_orig == im->gdes[ii].step_orig)) {
+                    /* OK, the data is already there.
+                     ** Just copy the header portion
+                     */
+                    im->gdes[i].start = im->gdes[ii].start;
+                    im->gdes[i].end = im->gdes[ii].end;
+                    im->gdes[i].step = im->gdes[ii].step;
+                    im->gdes[i].ds_cnt = im->gdes[ii].ds_cnt;
+                    im->gdes[i].ds_namv = im->gdes[ii].ds_namv;
+                    im->gdes[i].data = im->gdes[ii].data;
+                    im->gdes[i].data_first = 0;
+                    skip = 1;
+                }
+                if (skip)
+                    break;
             }
-            if (skip)
-                break;
         }
         if (!skip) {
             unsigned long ft_step = im->gdes[i].step;   /* ft_step will record what we got from fetch */
@@ -886,23 +881,31 @@ int data_fetch(
                             &im->gdes[i].data);
                     if (status != 0){
                         generate_nan(im, i);
+                        im->generate_nan = 1;
+                    }else{
+                        im->generate_nan = 0;
                     }
                 }else
                 {
                     generate_nan(im, i);
+                    im->generate_nan = 1;
                 }
             }
             else
             {
-                if ((rrd_fetch_fn(im->gdes[i].rrd,
+                status = rrd_fetch_fn(im->gdes[i].rrd,
                                 im->gdes[i].cf,
                                 &im->gdes[i].start,
                                 &im->gdes[i].end,
                                 &ft_step,
                                 &im->gdes[i].ds_cnt,
                                 &im->gdes[i].ds_namv,
-                                &im->gdes[i].data)) == -1) {
-                generate_nan(im, i);
+                                &im->gdes[i].data); 
+                if(status == -1){
+                    generate_nan(im, i);
+                    im->generate_nan = 1;
+                }else{
+                    im->generate_nan = 0;
                 }
             }   
             im->gdes[i].data_first = 1;
@@ -963,7 +966,6 @@ int generate_nan(
         {
             data[k] = DNAN;
         }
-    printf("~~~~~~~~~~~~~~~~~ Done GENERATING NaN ~~~~~~~~~~~~~~~~~~~~\n");
     }else{
         return -1;
     }
@@ -1403,7 +1405,7 @@ int data_proc(
         if (im->logarithmic)
             im->maxval = maxval * 2.0;
         else{
-            if(im->heat_base > 0)
+            if(im->heat_base >= 0)
                 im->maxval = maxval + im->tot_heat_height;
             else
                 im->maxval = maxval;
@@ -4305,6 +4307,7 @@ void rrd_graph_init(
     im->heat_gap = 0.0;
     im->heat_base = 0.0;
     im->c_timeout = 0;
+    im->generate_nan = 0;
 
     im->surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 10, 10);
     im->cr = cairo_create(im->surface);

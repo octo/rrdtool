@@ -1950,6 +1950,12 @@ static int handle_request_help (HANDLER_PROTO) /* {{{ */
 
   if (help && (help->syntax || help->help))
   {
+    printf("************Delaying help***********");
+    int x, y;
+    x = rand();
+    y = (x % 10) + 5;
+    sleep(y);
+
     char tmp[CMD_MAX];
 
     snprintf(tmp, sizeof(tmp)-1, "Help for %s\n", help->cmd);
