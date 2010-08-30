@@ -44,7 +44,6 @@ int       ChangeRoot = 0;
 void PrintUsage(
     char *cmd)
 {
-
     const char *help_main =
         N_("RRDtool %s"
            "  Copyright 1997-2009 by Tobias Oetiker <tobi@oetiker.ch>\n"

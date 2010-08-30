@@ -817,36 +817,37 @@ int data_fetch(
 
     /* pull the data from the rrd files ... */
     for (i = 0; i < (int) im->gdes_c; i++) {
+        im->gdes[i].generate_nan = 0;
         /* only GF_DEF elements fetch data */
         if (im->gdes[i].gf != GF_DEF)
             continue;
         skip = 0;
         /* do we have it already ? */
-        if(!im->generate_nan){
-            for (ii = 0; ii < i; ii++) {
-                if (im->gdes[ii].gf != GF_DEF)
-                    continue;
-                if ((strcmp(im->gdes[i].rrd, im->gdes[ii].rrd) == 0)
-                    && (im->gdes[i].cf == im->gdes[ii].cf)
-                    && (im->gdes[i].cf_reduce == im->gdes[ii].cf_reduce)
-                    && (im->gdes[i].start_orig == im->gdes[ii].start_orig)
-                    && (im->gdes[i].end_orig == im->gdes[ii].end_orig)
-                    && (im->gdes[i].step_orig == im->gdes[ii].step_orig)) {
-                    /* OK, the data is already there.
-                     ** Just copy the header portion
-                     */
-                    im->gdes[i].start = im->gdes[ii].start;
-                    im->gdes[i].end = im->gdes[ii].end;
-                    im->gdes[i].step = im->gdes[ii].step;
-                    im->gdes[i].ds_cnt = im->gdes[ii].ds_cnt;
-                    im->gdes[i].ds_namv = im->gdes[ii].ds_namv;
-                    im->gdes[i].data = im->gdes[ii].data;
-                    im->gdes[i].data_first = 0;
+        for (ii = 0; ii < i; ii++) {
+            if (im->gdes[ii].gf != GF_DEF)
+                continue;
+            if ((strcmp(im->gdes[i].rrd, im->gdes[ii].rrd) == 0)
+                && (im->gdes[i].cf == im->gdes[ii].cf)
+                && (im->gdes[i].cf_reduce == im->gdes[ii].cf_reduce)
+                && (im->gdes[i].start_orig == im->gdes[ii].start_orig)
+                && (im->gdes[i].end_orig == im->gdes[ii].end_orig)
+                && (im->gdes[i].step_orig == im->gdes[ii].step_orig)) {
+                /* OK, the data is already there.
+                 ** Just copy the header portion
+                 */
+                im->gdes[i].start = im->gdes[ii].start;
+                im->gdes[i].end = im->gdes[ii].end;
+                im->gdes[i].step = im->gdes[ii].step;
+                im->gdes[i].ds_cnt = im->gdes[ii].ds_cnt;
+                im->gdes[i].ds_namv = im->gdes[ii].ds_namv;
+                im->gdes[i].data = im->gdes[ii].data;
+                im->gdes[i].data_first = 0;
+                /*DON'T SKIP fetching, if nan has been generated for this gdes*/
+                if(!im->gdes[ii].generate_nan) // if(0 == im->gdes[i].generate_nan)
                     skip = 1;
-                }
-                if (skip)
-                    break;
             }
+            if (skip)
+                break;
         }
         if (!skip) {
             unsigned long ft_step = im->gdes[i].step;   /* ft_step will record what we got from fetch */
@@ -881,14 +882,14 @@ int data_fetch(
                             &im->gdes[i].data);
                     if (status != 0){
                         generate_nan(im, i);
-                        im->generate_nan = 1;
+                        im->gdes[i].generate_nan = 1;
                     }else{
-                        im->generate_nan = 0;
+                        im->gdes[i].generate_nan = 0;
                     }
                 }else
                 {
                     generate_nan(im, i);
-                    im->generate_nan = 1;
+                    im->gdes[i].generate_nan = 1;
                 }
             }
             else
@@ -903,9 +904,9 @@ int data_fetch(
                                 &im->gdes[i].data); 
                 if(status == -1){
                     generate_nan(im, i);
-                    im->generate_nan = 1;
+                    im->gdes[i].generate_nan = 1;
                 }else{
-                    im->generate_nan = 0;
+                    im->gdes[i].generate_nan = 0;
                 }
             }   
             im->gdes[i].data_first = 1;
@@ -931,7 +932,8 @@ int data_fetch(
         if (im->gdes[i].ds == -1) {
             rrd_set_error("No DS called '%s' in '%s'",
                           im->gdes[i].ds_nam, im->gdes[i].rrd);
-            return -1;
+            generate_nan(im, i);
+            im->gdes[i].generate_nan = 1;
         }
 
     }
@@ -4307,7 +4309,6 @@ void rrd_graph_init(
     im->heat_gap = 0.0;
     im->heat_base = 0.0;
     im->c_timeout = 0;
-    im->generate_nan = 0;
 
     im->surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 10, 10);
     im->cr = cairo_create(im->surface);

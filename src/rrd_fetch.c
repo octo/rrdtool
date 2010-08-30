@@ -85,7 +85,6 @@ int rrd_fetch(
         {"daemon", required_argument, 0, 'd'},
         {0, 0, 0, 0}
     };
-
     optind = 0;
     opterr = 0;         /* initialize getopt */
 
@@ -197,6 +196,7 @@ int rrd_fetch_r(
 {                       /* two dimensional array containing the data */
     enum cf_en cf_idx;
 
+    
     if ((int) (cf_idx = cf_conv(cf)) == -1) {
         return -1;
     }
@@ -232,6 +232,7 @@ int rrd_fetch_fn(
     rrd_value_t *data_ptr;
     unsigned long rows;
 
+    
 #ifdef DEBUG
     fprintf(stderr, "Entered rrd_fetch_fn() searching for the best match\n");
     fprintf(stderr, "Looking for: start %10lu end %10lu step %5lu\n",

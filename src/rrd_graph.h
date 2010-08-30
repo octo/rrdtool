@@ -174,6 +174,7 @@ typedef struct graph_desc_t {
     time_t    xrule;    /* time for x rule line and for VDEF */
     vdef_t    vf;       /* instruction for VDEF function */
     rpnp_t   *rpnp;     /* instructions for CDEF function */
+    int       generate_nan; /* boolean. Indicates if nan series had been generated for this gdes */
 
     /* SHIFT implementation */
     int       shidx;    /* gdes reference for offset (-1 --> constant) */
@@ -210,7 +211,6 @@ typedef struct image_desc_t {
     int       nan_fill;    /* boolean. If true, generate nan if fetch does not succeed? */
     int       conn_to;    /* boolean. If true, connect to rrdcached using user-specified timeout */
     int       c_timeout;  /*Connect timeout*/
-    int       generate_nan; /* boolean. Indicates if nan series had been generated or not */
     double    tot_heat_height; /*total height of the heat-map*/
     long      xsize, ysize; /* graph area size in pixels */
     struct gfx_color_t graph_col[__GRC_END__];  /* real colors for the graph */
