@@ -881,9 +881,10 @@ int data_fetch(
                             &im->gdes[i].ds_namv,
                             &im->gdes[i].data);
                 }
-                if (status != 0 && !im->nan_fill)
-                    return status;
-                generate_nan(im, i);
+                if (status != 0) {
+                    if (!im->nan_fill) return status;
+                    generate_nan(im, i);
+                }
             }
             else
             {
@@ -895,9 +896,10 @@ int data_fetch(
                                 &im->gdes[i].ds_cnt,
                                 &im->gdes[i].ds_namv,
                                 &im->gdes[i].data); 
-                if (status == -1 && !im->nan_fill)
-                    return status;
-                generate_nan(im, i);
+                if (status == -1) {
+                    if (!im->nan_fill) return status;
+                    generate_nan(im, i);
+                }
             }   
             im->gdes[i].data_first = 1;
 
