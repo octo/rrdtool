@@ -880,17 +880,10 @@ int data_fetch(
                             &im->gdes[i].ds_cnt,
                             &im->gdes[i].ds_namv,
                             &im->gdes[i].data);
-                    if (status != 0){
-                        generate_nan(im, i);
-                        im->gdes[i].generate_nan = 1;
-                    }else{
-                        im->gdes[i].generate_nan = 0;
-                    }
-                }else
-                {
-                    generate_nan(im, i);
-                    im->gdes[i].generate_nan = 1;
                 }
+                if (status != 0 && !im->nan_fill)
+                    return status;
+                generate_nan(im, i);
             }
             else
             {
@@ -902,12 +895,9 @@ int data_fetch(
                                 &im->gdes[i].ds_cnt,
                                 &im->gdes[i].ds_namv,
                                 &im->gdes[i].data); 
-                if(status == -1){
-                    generate_nan(im, i);
-                    im->gdes[i].generate_nan = 1;
-                }else{
-                    im->gdes[i].generate_nan = 0;
-                }
+                if (status == -1 && !im->nan_fill)
+                    return status;
+                generate_nan(im, i);
             }   
             im->gdes[i].data_first = 1;
 
@@ -930,10 +920,13 @@ int data_fetch(
             }
         }
         if (im->gdes[i].ds == -1) {
-            rrd_set_error("No DS called '%s' in '%s'",
-                          im->gdes[i].ds_nam, im->gdes[i].rrd);
-            generate_nan(im, i);
-            im->gdes[i].generate_nan = 1;
+            if (im->nan_fill) {
+                generate_nan(im, i);
+            } else {
+                rrd_set_error("No DS called '%s' in '%s'",
+                              im->gdes[i].ds_nam, im->gdes[i].rrd);
+                return -1;
+            }            
         }
 
     }
@@ -943,34 +936,34 @@ int data_fetch(
 int generate_nan(
     image_desc_t *im, int i)
 {
-    if(im->nan_fill){
-        printf("############### GENERATING NaN ################\n");
-        im->gdes[i].ds_cnt = 1;
-//        printf("Number of DS %d\n", im->gdes[i].ds_cnt);
+    //printf("############### GENERATING NaN ################\n");
+    im->gdes[i].ds_cnt = 1;
+    //printf("Number of DS %d\n", im->gdes[i].ds_cnt);
 
-        im->gdes[i].ds_namv = calloc(im->gdes[i].ds_cnt, sizeof(char*));
-        for (int l = 0; l < (int) im->gdes[i].ds_cnt; l++) {
-            im->gdes[i].ds_namv[l] = (char*)malloc(sizeof(char) * DS_NAM_SIZE);
-            strncpy(im->gdes[i].ds_namv[l], im->gdes[i].ds_nam, DS_NAM_SIZE - 1);
-        }
-
-        unsigned long int data_size = im->gdes[i].ds_cnt * (im->gdes[i].end
-                    - im->gdes[i].start)/im->gdes[i].step;
-        rrd_value_t *data;
-        data = (rrd_value_t *) calloc (data_size, sizeof (rrd_value_t));
-
-        if(data == NULL)
-            rrd_set_error("Failed allocating memory for NaN data.");
-
-        im->gdes[i].data = data;
-        unsigned long int k = 0;
-        for (k = 0; k < data_size; k ++)
-        {
-            data[k] = DNAN;
-        }
-    }else{
-        return -1;
+    im->gdes[i].ds_namv = calloc(im->gdes[i].ds_cnt, sizeof(char*));
+    for (int l = 0; l < (int) im->gdes[i].ds_cnt; l++) {
+        im->gdes[i].ds_namv[l] = (char*)malloc(sizeof(char) * DS_NAM_SIZE);
+        strncpy(im->gdes[i].ds_namv[l], im->gdes[i].ds_nam, DS_NAM_SIZE - 1);
     }
+
+    unsigned long int data_size = im->gdes[i].ds_cnt * (im->gdes[i].end
+                                - im->gdes[i].start)/im->gdes[i].step;
+    rrd_value_t *data;
+    data = (rrd_value_t *) calloc (data_size, sizeof (rrd_value_t));
+
+    if(data == NULL)
+        rrd_set_error("Failed allocating memory for NaN data.");
+
+    im->gdes[i].data = data;
+    unsigned long int k = 0;
+    for (k = 0; k < data_size; k ++)
+    {
+        data[k] = DNAN;
+    }
+    im->gdes[i].generate_nan = 1;
+    rrd_clear_error();
+    fprintf(stderr, "WARNING: cannot retrieve DS '%s' in '%s', generating NaN's\n",
+            im->gdes[i].ds_nam, im->gdes[i].rrd);
     return 0;
 }
 
@@ -5122,8 +5115,8 @@ int vdef_calc(
     steps = (src->end - src->start) / src->step;
 #if 0
     printf
-        ("DEBUG: start == %lu, end == %lu, %lu steps\n",
-         src->start, src->end, steps);
+        ("DEBUG: ds=%d start == %lu, end == %lu, %lu steps\n",
+         src->ds, src->start, src->end, steps);
 #endif
     switch (dst->vf.op) {
     case VDEF_PERCENT:{
