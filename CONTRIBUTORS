@@ -3,6 +3,7 @@ $Id$
 I would like to thank to following people for helping to
 bring RRDtool into existence.
 
+Aaron Gallagher <_ with habnab.it> MEDIAN operator
 Alan Lichty <alan_lichty with eli.net> 
 Alan Milligan <alan.milligan@last-bastion.net> Python bindings
 Alex van den Bogaerdt <alex with ergens.op.het.net> (rrd_resize.c and more)

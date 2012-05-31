@@ -78,6 +78,8 @@ Bug Fixes
 * rrd_update: be more diligent in checking the input arguments for rrdtool  update and
   complain if they are wrong. fix for #243 (and more) -- tobi oetiker
 
+* rrd_graph_rpn: add a MEDIAN operator. -- Aaron Gallagher <_@habnab.it>
+
 ----- Older Changelog --------------------
 
 2009-11-15 11:54  oetiker
